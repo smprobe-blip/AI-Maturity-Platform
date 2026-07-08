@@ -1,213 +1,164 @@
-"""Analytics service — DuckDB queries for scientific analysis."""
+"""Analytics Service for aggregating audit data."""
 
-from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-import duckdb
-import pandas as pd
+from typing import List, Dict, Any
 import structlog
 
-from app.core.config import settings
-from app.storage.parquet_storage import ParquetStorage
+from app.services.audit_service import AuditService
 
 logger = structlog.get_logger()
 
 
 class AnalyticsService:
-    """Service for scientific analytics using DuckDB."""
+    """Service for analytics aggregations."""
     
     def __init__(self):
-        self.raw_audits_path = Path(settings.raw_audits_path)
-        self.parquet_storage = ParquetStorage()
+        self.audit_service = AuditService()
     
-    def _get_duckdb_connection(self):
-        """Create DuckDB connection."""
-        return duckdb.connect(":memory:")
-    
-    def calculate_benchmarks(self, industry: Optional[str] = None) -> pd.DataFrame:
-        """Calculate industry benchmarks from raw audit data."""
-        conn = self._get_duckdb_connection()
-        
-        # Find all audit JSON files
-        json_files = list(self.raw_audits_path.rglob("audit_*.json"))
-        
-        if not json_files:
-            logger.warning("no_audit_files_found_for_benchmarks")
-            return pd.DataFrame()
-        
-        # Build file list for DuckDB
-        file_list = [str(f) for f in json_files]
-        
-        query = """
-            WITH audit_data AS (
-                SELECT 
-                    audit_id,
-                    company_profile->>'industry' as industry,
-                    company_profile->>'company_size' as company_size,
-                    calculated_indices->>'composite_score' as composite_score_str,
-                    calculated_indices->>'maturity_level' as maturity_level,
-                    created_at
-                FROM read_json_auto(?, maximum_depth=3)
-            ),
-            scores AS (
-                SELECT 
-                    industry,
-                    CAST(composite_score_str AS DOUBLE) as composite_score,
-                    maturity_level
-                FROM audit_data
-                WHERE composite_score_str IS NOT NULL
-            )
-            SELECT 
-                industry,
-                COUNT(*) as sample_size,
-                AVG(composite_score) as average_score,
-                MEDIAN(composite_score) as median_score,
-                STDDEV(composite_score) as std_dev,
-                MIN(composite_score) as min_score,
-                MAX(composite_score) as max_score
-            FROM scores
-            {}
-            GROUP BY industry
-            ORDER BY sample_size DESC
-        """.format(
-            f"WHERE industry = '{industry}'" if industry else ""
-        )
-        
+    def get_overview(self) -> Dict[str, Any]:
+        """Get analytics overview."""
         try:
-            result = conn.execute(query, [file_list]).df()
-            logger.info(
-                "benchmarks_calculated",
-                industries_count=len(result),
-                total_audits=result["sample_size"].sum() if not result.empty else 0,
-            )
-            return result
+            audits = self.audit_service.list_audits(limit=1000)
+            
+            if not audits:
+                return {
+                    "total_audits": 0,
+                    "avg_score": 0.0,
+                    "max_score": 0.0,
+                    "min_score": 0.0,
+                    "avg_roi": 0.0,
+                }
+            
+            scores = []
+            for audit in audits:
+                calculated = audit.get("calculated_indices", {})
+                score = calculated.get("composite_score", 0)
+                if score:
+                    scores.append(float(score))
+            
+            return {
+                "total_audits": len(audits),
+                "avg_score": sum(scores) / len(scores) if scores else 0.0,
+                "max_score": max(scores) if scores else 0.0,
+                "min_score": min(scores) if scores else 0.0,
+                "avg_roi": sum(a.get("calculated_indices", {}).get("roi_estimate_percent", 0) for a in audits) / len(audits) if audits else 0.0,
+            }
         except Exception as e:
-            logger.error("benchmark_calculation_failed", error=str(e))
-            return pd.DataFrame()
+            logger.error("analytics_overview_failed", error=str(e))
+            return {
+                "total_audits": 0,
+                "avg_score": 0.0,
+                "max_score": 0.0,
+                "min_score": 0.0,
+                "avg_roi": 0.0,
+            }
     
-    def get_distribution_by_maturity(self) -> Dict[str, int]:
-        """Get distribution of audits by maturity level."""
-        conn = self._get_duckdb_connection()
-        json_files = list(self.raw_audits_path.rglob("audit_*.json"))
-        
-        if not json_files:
-            return {}
-        
-        query = """
-            SELECT 
-                calculated_indices->>'maturity_level' as maturity_level,
-                COUNT(*) as count
-            FROM read_json_auto(?, maximum_depth=3)
-            WHERE calculated_indices->>'maturity_level' IS NOT NULL
-            GROUP BY maturity_level
-            ORDER BY maturity_level
-        """
-        
+    def get_by_industry(self) -> List[Dict[str, Any]]:
+        """Get analytics grouped by industry."""
         try:
-            result = conn.execute(query, [json_files]).df()
-            return dict(zip(result["maturity_level"], result["count"]))
+            audits = self.audit_service.list_audits(limit=1000)
+            
+            industry_data = {}
+            for audit in audits:
+                company = audit.get("company_profile", {})
+                industry = company.get("industry", "Unknown")
+                calculated = audit.get("calculated_indices", {})
+                score = float(calculated.get("composite_score", 0))
+                
+                if industry not in industry_data:
+                    industry_data[industry] = {"scores": [], "count": 0}
+                
+                industry_data[industry]["scores"].append(score)
+                industry_data[industry]["count"] += 1
+            
+            result = []
+            for industry, data in industry_data.items():
+                avg_score = sum(data["scores"]) / len(data["scores"]) if data["scores"] else 0.0
+                result.append({
+                    "industry": industry,
+                    "count": data["count"],
+                    "avg_score": round(avg_score, 2),
+                })
+            
+            return sorted(result, key=lambda x: x["count"], reverse=True)
         except Exception as e:
-            logger.error("distribution_calculation_failed", error=str(e))
-            return {}
-    
-    def get_top_industries(self, limit: int = 5) -> List[Dict[str, Any]]:
-        """Get top industries by audit count."""
-        conn = self._get_duckdb_connection()
-        json_files = list(self.raw_audits_path.rglob("audit_*.json"))
-        
-        if not json_files:
-            return []
-        
-        query = """
-            SELECT 
-                company_profile->>'industry' as industry,
-                COUNT(*) as audit_count,
-                AVG(CAST(calculated_indices->>'composite_score' AS DOUBLE)) as avg_score
-            FROM read_json_auto(?, maximum_depth=3)
-            WHERE company_profile->>'industry' IS NOT NULL
-            GROUP BY industry
-            ORDER BY audit_count DESC
-            LIMIT ?
-        """
-        
-        try:
-            result = conn.execute(query, [json_files, limit]).df()
-            return result.to_dict("records")
-        except Exception as e:
-            logger.error("top_industries_calculation_failed", error=str(e))
+            logger.error("analytics_by_industry_failed", error=str(e))
             return []
     
-    def calculate_cronbach_alpha(self, dimension_id: int) -> float:
-        """Calculate Cronbach's alpha for a dimension (reliability)."""
-        # Simplified implementation
-        # In real implementation, use factor_analyzer or pingouin
-        conn = self._get_duckdb_connection()
-        json_files = list(self.raw_audits_path.rglob("audit_*.json"))
-        
-        if not json_files:
-            return 0.0
-        
-        query = """
-            SELECT 
-                unnest(raw_responses)->>'score' as score,
-                unnest(raw_responses)->>'question_id' as question_id
-            FROM read_json_auto(?, maximum_depth=5)
-        """
-        
+    def get_by_level(self) -> List[Dict[str, Any]]:
+        """Get analytics grouped by maturity level."""
         try:
-            # This is a simplified placeholder
-            # Real Cronbach's alpha requires more complex calculation
-            return 0.75  # Placeholder value
+            audits = self.audit_service.list_audits(limit=1000)
+            
+            level_data = {}
+            for audit in audits:
+                calculated = audit.get("calculated_indices", {})
+                level = calculated.get("maturity_level", "Unknown")
+                
+                if level not in level_data:
+                    level_data[level] = 0
+                level_data[level] += 1
+            
+            result = [{"level": level, "count": count} for level, count in level_data.items()]
+            return sorted(result, key=lambda x: x["level"])
         except Exception as e:
-            logger.error("cronbach_calculation_failed", error=str(e))
-            return 0.0
+            logger.error("analytics_by_level_failed", error=str(e))
+            return []
     
-    def calculate_correlation_matrix(self) -> Dict[str, Dict[str, float]]:
-        """Calculate correlation matrix between dimensions."""
-        # Simplified placeholder
-        dimensions = ["Strategy", "Data", "Technology", "Processes", "People", "Culture", "Ethics"]
-        matrix = {}
-        
-        for dim1 in dimensions:
-            matrix[dim1] = {}
-            for dim2 in dimensions:
-                if dim1 == dim2:
-                    matrix[dim1][dim2] = 1.0
-                else:
-                    matrix[dim1][dim2] = 0.5  # Placeholder
-        
-        return matrix
-    
-    def get_completeness_score(self) -> float:
-        """Calculate data completeness score (0-100)."""
-        # Simplified: check percentage of audits with all fields
-        conn = self._get_duckdb_connection()
-        json_files = list(self.raw_audits_path.rglob("audit_*.json"))
-        
-        if not json_files:
-            return 0.0
-        
-        # Placeholder calculation
-        return 92.5
-    
-    def get_outlier_count(self) -> int:
-        """Count outliers in audit data."""
-        # Simplified: audits with extreme scores (very high or very low)
-        conn = self._get_duckdb_connection()
-        json_files = list(self.raw_audits_path.rglob("audit_*.json"))
-        
-        if not json_files:
-            return 0
-        
-        query = """
-            SELECT COUNT(*) as outlier_count
-            FROM read_json_auto(?, maximum_depth=3)
-            WHERE CAST(calculated_indices->>'composite_score' AS DOUBLE) > 4.5
-               OR CAST(calculated_indices->>'composite_score' AS DOUBLE) < 1.5
-        """
-        
+    def get_top_companies(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get top companies by composite score."""
         try:
-            result = conn.execute(query, [json_files]).df()
-            return int(result.iloc[0]["outlier_count"])
-        except Exception:
-            return 0
+            audits = self.audit_service.list_audits(limit=1000)
+            
+            companies = []
+            for audit in audits:
+                contact = audit.get("contact", {})
+                company = audit.get("company_profile", {})
+                calculated = audit.get("calculated_indices", {})
+                
+                score = float(calculated.get("composite_score", 0))
+                companies.append({
+                    "company_name": contact.get("name", "Unknown"),
+                    "industry": company.get("industry", "Unknown"),
+                    "score": score,
+                    "maturity_level": calculated.get("maturity_level", "Unknown"),
+                    "audit_id": audit.get("audit_id"),
+                })
+            
+            return sorted(companies, key=lambda x: x["score"], reverse=True)[:limit]
+        except Exception as e:
+            logger.error("analytics_top_companies_failed", error=str(e))
+            return []
+
+    def get_by_company_size(self) -> List[Dict[str, Any]]:
+        """Get analytics grouped by company size."""
+        try:
+            audits = self.audit_service.list_audits(limit=1000)
+            
+            size_data = {}
+            for audit in audits:
+                company = audit.get("company_profile", {})
+                size = company.get("company_size", "Unknown")
+                calculated = audit.get("calculated_indices", {})
+                score = float(calculated.get("composite_score", 0))
+                
+                if size not in size_data:
+                    size_data[size] = {"scores": [], "count": 0}
+                
+                size_data[size]["scores"].append(score)
+                size_data[size]["count"] += 1
+            
+            result = []
+            for size, data in size_data.items():
+                avg_score = sum(data["scores"]) / len(data["scores"]) if data["scores"] else 0.0
+                result.append({
+                    "company_size": size,
+                    "count": data["count"],
+                    "avg_score": round(avg_score, 2),
+                })
+            
+            return sorted(result, key=lambda x: x["company_size"])
+        except Exception as e:
+            logger.error("analytics_by_company_size_failed", error=str(e))
+            return [] 
+
+analytics_service = AnalyticsService()

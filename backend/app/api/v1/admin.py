@@ -16,6 +16,8 @@ from app.services.email_service import email_service
 
 from app.services.lead_service import lead_service
 
+from app.services.analytics_service import analytics_service
+
 
 router = APIRouter()
 
@@ -182,3 +184,36 @@ async def send_test_email(
     else:
         from fastapi import HTTPException
         raise HTTPException(status_code=500, detail="Failed to send email")
+
+# === Analytics Endpoints ===
+
+@router.get("/analytics/overview")
+async def get_analytics_overview(current_user: User = Depends(get_current_user)):
+    """Get analytics overview."""
+    return analytics_service.get_overview()
+
+
+@router.get("/analytics/by-industry")
+async def get_analytics_by_industry(current_user: User = Depends(get_current_user)):
+    """Get analytics grouped by industry."""
+    return analytics_service.get_by_industry()
+
+
+@router.get("/analytics/by-level")
+async def get_analytics_by_level(current_user: User = Depends(get_current_user)):
+    """Get analytics grouped by maturity level."""
+    return analytics_service.get_by_level()
+
+
+@router.get("/analytics/top-companies")
+async def get_analytics_top_companies(
+    limit: int = 10,
+    current_user: User = Depends(get_current_user)
+):
+    """Get top companies by composite score."""
+    return analytics_service.get_top_companies(limit)
+
+@router.get("/analytics/by-company-size")
+async def get_analytics_by_company_size(current_user: User = Depends(get_current_user)):
+    """Get analytics grouped by company size."""
+    return analytics_service.get_by_company_size()
