@@ -2,11 +2,14 @@
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, EmailStr
+import structlog
 
 from app.models.audit import AuditExpressCreate, AuditExpressResponse
 from app.services.audit_service import AuditService
 from app.services.email_service import EmailService
+from app.services.lead_service import lead_service
 
+logger = structlog.get_logger()
 router = APIRouter()
 
 
@@ -18,30 +21,49 @@ class EmailRequest(BaseModel):
 @router.post("/audits/express", response_model=AuditExpressResponse, status_code=status.HTTP_201_CREATED)
 async def create_express_audit(data: AuditExpressCreate):
     """Create express audit (public calculator)."""
-    import structlog
-    logger = structlog.get_logger()
-    
     service = AuditService()
     
     try:
         audit_data = service.create_express_audit(data)
         logger.info("audit_created", audit_id=audit_data["audit_id"])
         
-        # Sync to Baserow CRM
+        # === Автоматическое создание лида в Baserow ===
         try:
-            from app.integrations.baserow_client import BaserowClient
-            logger.info("starting_baserow_sync", audit_id=audit_data["audit_id"])
+            calculated_indices = audit_data.get("calculated_indices", {})
+            company_profile = audit_data.get("company_profile", {})
+            contact = audit_data.get("contact", {})
             
-            baserow = BaserowClient()
-            logger.info("baserow_client_config", 
-                       url=baserow.api_url, 
-                       table_id=baserow.leads_table_id,
-                       token_len=len(baserow.api_token))
+            lead_data = {
+                "audit_id": audit_data["audit_id"],
+                "name": contact.get("name", "Unknown"),
+                "email": contact.get("email", ""),
+                "position": contact.get("position", ""),
+                "industry": company_profile.get("industry", ""),
+                "company_size": company_profile.get("company_size", ""),
+                "region": company_profile.get("region", ""),
+                "composite_score": int(calculated_indices.get("composite_score", 0)),
+                "maturity_level": calculated_indices.get("maturity_level", ""),
+                "roi_estimate": int(calculated_indices.get("roi_estimate_percent", 0)),
+                "status": "New",
+                "created_at": audit_data.get("created_at", ""),
+            }
             
-            result = await baserow.sync_lead(audit_data)
-            logger.info("baserow_sync_result", result=result)
-        except Exception as e:
-            logger.error("baserow_sync_error", error=str(e), exc_info=True)
+            logger.info("creating_lead", audit_id=audit_data["audit_id"])
+            lead_result = lead_service.create_lead(lead_data)
+            
+            if lead_result:
+                logger.info("lead_created_from_audit", 
+                           audit_id=audit_data["audit_id"], 
+                           lead_id=lead_result.get("id"))
+            else:
+                logger.warning("lead_creation_failed", audit_id=audit_data["audit_id"])
+        except Exception as lead_error:
+            # Не блокируем создание аудита из-за ошибки лида
+            logger.error("lead_creation_error", 
+                        audit_id=audit_data["audit_id"], 
+                        error=str(lead_error), 
+                        exc_info=True)
+        # === КОНЕЦ БЛОКА СОЗДАНИЯ ЛИДА ===
         
         return AuditExpressResponse(
             audit_id=audit_data["audit_id"],
@@ -130,10 +152,10 @@ async def send_audit_report(audit_id: str, request: EmailRequest):
             detail=str(e),
         )
 
+
 @router.get("/benchmarks/{industry}")
 async def get_industry_benchmark(industry: str):
     """Get industry benchmark data."""
-    # TODO: Implement benchmark retrieval from Parquet storage
     return {
         "industry": industry,
         "average_score": 2.8,
