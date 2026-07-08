@@ -1,0 +1,58 @@
+$body = @'
+{
+  "company_profile": {
+    "industry": "Retail",
+    "company_size": "Large (1000+)",
+    "region": "Moscow"
+  },
+  "contact": {
+    "email": "test@example.com",
+    "name": "Test User",
+    "consent_to_process_data": true
+  },
+  "raw_responses": [
+    {"dimension_id": 1, "question_id": 1, "score": 4},
+    {"dimension_id": 1, "question_id": 2, "score": 3},
+    {"dimension_id": 1, "question_id": 3, "score": 4},
+    {"dimension_id": 1, "question_id": 4, "score": 3},
+    {"dimension_id": 1, "question_id": 5, "score": 4},
+    {"dimension_id": 2, "question_id": 1, "score": 3},
+    {"dimension_id": 2, "question_id": 2, "score": 3},
+    {"dimension_id": 2, "question_id": 3, "score": 4},
+    {"dimension_id": 2, "question_id": 4, "score": 3},
+    {"dimension_id": 2, "question_id": 5, "score": 3},
+    {"dimension_id": 3, "question_id": 1, "score": 4},
+    {"dimension_id": 3, "question_id": 2, "score": 4},
+    {"dimension_id": 3, "question_id": 3, "score": 3},
+    {"dimension_id": 3, "question_id": 4, "score": 4},
+    {"dimension_id": 3, "question_id": 5, "score": 4},
+    {"dimension_id": 4, "question_id": 1, "score": 3},
+    {"dimension_id": 4, "question_id": 2, "score": 3},
+    {"dimension_id": 4, "question_id": 3, "score": 3},
+    {"dimension_id": 4, "question_id": 4, "score": 4},
+    {"dimension_id": 4, "question_id": 5, "score": 3},
+    {"dimension_id": 5, "question_id": 1, "score": 4},
+    {"dimension_id": 5, "question_id": 2, "score": 3},
+    {"dimension_id": 5, "question_id": 3, "score": 4},
+    {"dimension_id": 5, "question_id": 4, "score": 3},
+    {"dimension_id": 5, "question_id": 5, "score": 4},
+    {"dimension_id": 6, "question_id": 1, "score": 3},
+    {"dimension_id": 6, "question_id": 2, "score": 4},
+    {"dimension_id": 6, "question_id": 3, "score": 3},
+    {"dimension_id": 6, "question_id": 4, "score": 4},
+    {"dimension_id": 6, "question_id": 5, "score": 3},
+    {"dimension_id": 7, "question_id": 1, "score": 4},
+    {"dimension_id": 7, "question_id": 2, "score": 4},
+    {"dimension_id": 7, "question_id": 3, "score": 3},
+    {"dimension_id": 7, "question_id": 4, "score": 4},
+    {"dimension_id": 7, "question_id": 5, "score": 4}
+  ]
+}
+'@
+
+$response = Invoke-RestMethod -Uri "http://localhost:8000/api/v1/public/audits/express" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body $body
+
+$response

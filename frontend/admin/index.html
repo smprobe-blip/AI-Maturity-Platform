@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Maturity - Admin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 24px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-pdf {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .content { padding: 30px; }
+        .login-screen { text-align: center; padding: 80px 30px; }
+        .login-btn {
+            padding: 12px 32px;
+            font-size: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px; }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .stat-card h3 { font-size: 14px; opacity: 0.9; }
+        .stat-card .value { font-size: 32px; font-weight: 700; }
+        .filters { display: flex; gap: 15px; margin-bottom: 20px; }
+        .filter-input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; min-width: 200px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: 600; font-size: 13px; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            max-width: 800px;
+            margin: 50px auto;
+            border-radius: 12px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+        .modal-body { padding: 20px; }
+        .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AI Maturity Platform - Admin</h1>
+            <div id="userInfo" style="display: none;">
+                <span id="userName" style="color: white; margin-right: 10px;"></span>
+                <button class="btn btn-danger" onclick="logout()">Logout</button>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div id="loginScreen" class="login-screen">
+                <h2>Welcome!</h2>
+                <p style="margin-bottom: 30px; color: #666;">Sign in with Keycloak</p>
+                <button class="login-btn" onclick="login()">Sign in with Keycloak</button>
+            </div>
+            
+            <div id="mainContent" style="display: none;">
+                <div class="stats">
+                    <div class="stat-card">
+                        <h3>Total Audits</h3>
+                        <div class="value" id="totalAudits">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Average Score</h3>
+                        <div class="value" id="avgScore">0.0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Industries</h3>
+                        <div class="value" id="totalIndustries">0</div>
+                    </div>
+                </div>
+                
+                <div class="filters">
+                    <input type="text" class="filter-input" id="filterIndustry" placeholder="Industry..." oninput="loadAudits()">
+                    <select class="filter-input" id="filterStatus" onchange="loadAudits()">
+                        <option value="">All statuses</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+                
+                <div id="auditsTable"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="auditModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Audit Details</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="auditDetails"></div>
+        </div>
+    </div>
+    
+    <script>
+        var KEYCLOAK_URL = 'http://localhost:8080';
+        var KEYCLOAK_REALM = 'ai-maturity';
+        var CLIENT_ID = 'frontend-app';
+        var REDIRECT_URI = window.location.origin + '/admin/';
+        var currentUser = null;
+        var accessToken = null;
+        
+        window.addEventListener('DOMContentLoaded', function() { checkAuth(); });
+        
+        window.addEventListener('load', function() {
+            var urlParams = new URLSearchParams(window.location.search);
+            var code = urlParams.get('code');
+            if (code) exchangeCodeForToken(code);
+        });
+        
+        function checkAuth() {
+            var token = localStorage.getItem('access_token');
+            var user = localStorage.getItem('user_info');
+            if (token && user) {
+                accessToken = token;
+                currentUser = JSON.parse(user);
+                showMainContent();
+                loadAudits();
+            } else {
+                showLoginScreen();
+            }
+        }
+        
+        function login() {
+            window.location.href = KEYCLOAK_URL + '/realms/' + KEYCLOAK_REALM + '/protocol/openid-connect/auth?client_id=' + CLIENT_ID + '&redirect_uri=' + encodeURIComponent(REDIRECT_URI) + '&response_type=code&scope=openid profile email';
+        }
+        
+        function exchangeCodeForToken(code) {
+            fetch(KEYCLOAK_URL + '/realms/' + KEYCLOAK_REALM + '/protocol/openid-connect/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'grant_type=authorization_code&client_id=' + CLIENT_ID + '&code=' + code + '&redirect_uri=' + encodeURIComponent(REDIRECT_URI)
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                accessToken = data.access_token;
+                localStorage.setItem('access_token', data.access_token);
+                var payload = JSON.parse(atob(data.access_token.split('.')[1]));
+                currentUser = { username: payload.preferred_username || payload.email };
+                localStorage.setItem('user_info', JSON.stringify(currentUser));
+                window.history.replaceState({}, document.title, window.location.pathname);
+                showMainContent();
+                loadAudits();
+            })
+            .catch(function(e) { console.error(e); showLoginScreen(); });
+        }
+        
+        function logout() {
+            localStorage.clear();
+            window.location.href = KEYCLOAK_URL + '/realms/' + KEYCLOAK_REALM + '/protocol/openid-connect/logout?redirect_uri=' + encodeURIComponent(REDIRECT_URI);
+        }
+        
+        function showLoginScreen() {
+            document.getElementById('loginScreen').style.display = 'block';
+            document.getElementById('mainContent').style.display = 'none';
+            document.getElementById('userInfo').style.display = 'none';
+        }
+        
+        function showMainContent() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            document.getElementById('userInfo').style.display = 'flex';
+            document.getElementById('userName').textContent = currentUser.username;
+        }
+        
+        function loadAudits() {
+            fetch('http://localhost:8000/api/v1/admin/audits?limit=100', {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+            })
+            .then(function(r) {
+                if (r.status === 401) { logout(); return; }
+                return r.json();
+            })
+            .then(function(data) {
+                if (data) { displayAudits(data); updateStats(data); }
+            });
+        }
+        
+        function displayAudits(data) {
+            if (!data.items || data.items.length === 0) {
+                document.getElementById('auditsTable').innerHTML = '<p>No audits found</p>';
+                return;
+            }
+            var html = '<table><thead><tr><th>ID</th><th>Company</th><th>Industry</th><th>Score</th><th>Level</th><th>Actions</th></tr></thead><tbody>';
+            data.items.forEach(function(audit) {
+                var p = audit.company_profile || {};
+                var i = audit.calculated_indices || {};
+                html += '<tr>';
+                html += '<td>' + audit.audit_id.substring(0, 8) + '</td>';
+                html += '<td>' + (p.company_name || 'N/A') + '</td>';
+                html += '<td>' + (p.industry || 'N/A') + '</td>';
+                html += '<td><strong>' + (i.composite_score || 0).toFixed(1) + '</strong></td>';
+                html += '<td><span class="badge badge-info">' + (i.maturity_level || 'N/A') + '</span></td>';
+                html += '<td><button class="btn" style="background:#667eea;color:white;" onclick="viewAudit(' + "'" + audit.audit_id + "'" + ')">Details</button></td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            document.getElementById('auditsTable').innerHTML = html;
+        }
+        
+        function updateStats(data) {
+            document.getElementById('totalAudits').textContent = data.total || 0;
+            if (data.items && data.items.length > 0) {
+                var scores = data.items.map(function(a) { return (a.calculated_indices && a.calculated_indices.composite_score) || 0; });
+                document.getElementById('avgScore').textContent = (scores.reduce(function(a,b){return a+b;},0) / scores.length).toFixed(1);
+                var ind = {};
+                data.items.forEach(function(a) { if (a.company_profile && a.company_profile.industry) ind[a.company_profile.industry] = true; });
+                document.getElementById('totalIndustries').textContent = Object.keys(ind).length;
+            }
+        }
+        
+        function viewAudit(auditId) {
+            fetch('http://localhost:8000/api/v1/admin/audits/' + auditId, {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(audit) { displayAuditDetails(audit); });
+        }
+        
+        function displayAuditDetails(audit) {
+            var p = audit.company_profile || {};
+            var i = audit.calculated_indices || {};
+            var html = '';
+            html += '<div style="text-align:right;margin-bottom:20px;">';
+            html += '<button class="btn-pdf" onclick="downloadPDF(' + "'" + audit.audit_id + "'" + ')">Download PDF Report</button>';
+            html += '</div>';
+            html += '<h3>' + (p.company_name || 'Unknown') + '</h3>';
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin:20px 0;">';
+            html += '<div><strong>Industry:</strong> ' + (p.industry || 'N/A') + '</div>';
+            html += '<div><strong>Size:</strong> ' + (p.company_size || 'N/A') + '</div>';
+            html += '<div><strong>Score:</strong> ' + (i.composite_score || 0) + '</div>';
+            html += '<div><strong>Level:</strong> ' + (i.maturity_level || 'N/A') + '</div>';
+            html += '<div><strong>ROI:</strong> ' + (i.roi_estimate_percent || 0) + '%</div>';
+            html += '<div><strong>TCO:</strong> ' + (i.tco_estimate_millions || 0) + ' mln</div>';
+            html += '</div>';
+            html += '<h4>Dimension Scores:</h4>';
+            html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">';
+            if (i.dimension_scores) {
+                Object.keys(i.dimension_scores).forEach(function(dim) {
+                    html += '<div style="background:#f8f9fa;padding:10px;border-radius:6px;">';
+                    html += '<div style="font-size:12px;color:#666;">Dimension ' + dim + '</div>';
+                    html += '<div style="font-size:24px;font-weight:700;color:#667eea;">' + i.dimension_scores[dim] + '</div>';
+                    html += '</div>';
+                });
+            }
+            html += '</div>';
+            document.getElementById('auditDetails').innerHTML = html;
+            document.getElementById('auditModal').style.display = 'block';
+        }
+        
+        function downloadPDF(auditId) {
+            fetch('http://localhost:8000/api/v1/admin/audits/' + auditId + '/report/pdf', {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+            })
+            .then(function(r) {
+                if (!r.ok) throw new Error('PDF failed');
+                return r.blob();
+            })
+            .then(function(blob) {
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'report_' + auditId.substring(0, 8) + '.pdf';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            })
+            .catch(function(e) { alert('PDF Error: ' + e.message); });
+        }
+        
+        function closeModal() {
+            document.getElementById('auditModal').style.display = 'none';
+        }
+        
+        window.onclick = function(e) {
+            if (e.target === document.getElementById('auditModal')) closeModal();
+        }
+    </script>
+</body>
+</html>

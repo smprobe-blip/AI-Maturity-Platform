@@ -1,0 +1,174 @@
+#version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: ai-maturity-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - TZ=UTC
+      - APP_ENV=development
+      - APP_DEBUG=true
+      - BACKEND_HOST=0.0.0.0
+      - BACKEND_PORT=8000
+      - BACKEND_CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+      - YANDEX_S3_ENDPOINT=http://minio:9000 
+      - YANDEX_S3_ACCESS_KEY=minioadmin
+      - YANDEX_S3_SECRET_KEY=minioadmin
+      - YANDEX_S3_BUCKET=ai-maturity-data
+      - YANDEX_S3_REGION=ru-central1
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=ai-maturity
+      - KEYCLOAK_CLIENT_ID=backend-api
+      - KEYCLOAK_CLIENT_SECRET=Yoq5Uwgc8L2dnyYKiZTXoQAoDzXxnehe
+      - BASEROW_URL=http://baserow:80
+      - BASEROW_API_TOKEN=CE49jfknihUgaVqxJDUPqUXixc8hrsmx
+      - BASEROW_LEADS_TABLE_ID=511
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SMTP_USER=test
+      - SMTP_PASSWORD=test
+      - DATA_STORAGE_PATH=/data_storage
+      - RAW_AUDITS_PATH=/data_storage/raw_audits
+      - AGGREGATED_PATH=/data_storage/aggregated
+      - REPORTS_PATH=/data_storage/reports
+      - EXPORTS_PATH=/data_storage/exports
+      - LOGS_PATH=/data_storage/logs
+    volumes:
+      - ../data_storage:/data_storage
+      - ../backend:/app
+    depends_on:
+      - minio
+      - mailhog
+    networks:
+      - ai-maturity-network
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: ai-maturity-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_KEYCLOAK_URL=http://localhost:8080
+    depends_on:
+      - backend
+    networks:
+      - ai-maturity-network
+    restart: unless-stopped
+
+  # MinIO (S3-compatible storage)
+  minio:
+    image: minio/minio:latest
+    container_name: ai-maturity-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - ai-maturity-network
+    restart: unless-stopped
+
+  # MailHog (SMTP testing)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: ai-maturity-mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - ai-maturity-network
+    restart: unless-stopped
+
+  # Baserow (CRM)
+  baserow:
+    image: baserow/baserow:1.22.3
+    container_name: ai-maturity-baserow
+    ports:
+      - "3001:80"
+    environment:
+      - BASEROW_PUBLIC_URL=http://localhost:3001
+      - DATABASE_NAME=baserow
+      - DATABASE_USER=baserow
+      - DATABASE_PASSWORD=baserow
+      - DATABASE_HOST=baserow-db
+      - DATABASE_PORT=5432
+    volumes:
+      - baserow_data:/baserow/data
+    depends_on:
+      - baserow-db
+    networks:
+      - ai-maturity-network
+    restart: unless-stopped
+
+  # Baserow Database
+  baserow-db:
+    image: postgres:15
+    container_name: ai-maturity-baserow-db
+    environment:
+      - POSTGRES_DB=baserow
+      - POSTGRES_USER=baserow
+      - POSTGRES_PASSWORD=baserow
+    volumes:
+      - baserow_db_data:/var/lib/postgresql/data
+    networks:
+      - ai-maturity-network
+    restart: unless-stopped
+
+  # Keycloak (Auth)
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: ai-maturity-keycloak
+    ports:
+      - "8080:8080"
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://keycloak-db:5432/keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=keycloak
+      - TZ=UTC
+    command: start-dev
+    depends_on:
+      - keycloak-db
+    networks:
+      - ai-maturity-network
+    restart: unless-stopped
+
+  # Keycloak Database
+  keycloak-db:
+    image: postgres:15
+    container_name: ai-maturity-keycloak-db
+    environment:
+      - POSTGRES_DB=keycloak
+      - POSTGRES_USER=keycloak
+      - POSTGRES_PASSWORD=keycloak
+    volumes:
+      - keycloak_db_data:/var/lib/postgresql/data
+    networks:
+      - ai-maturity-network
+    restart: unless-stopped
+
+networks:
+  ai-maturity-network:
+    driver: bridge
+
+volumes:
+  minio_data:
+  baserow_data:
+  baserow_db_data:
+  keycloak_db_data:

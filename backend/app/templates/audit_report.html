@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Отчёт по аудиту ИИ-зрелости</title>
+    <style>
+        @page {
+            size: a4 portrait;
+            margin: 2cm;
+        }
+        
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            color: #333333;
+            font-size: 11pt;
+        }
+        
+        h1 {
+            color: #667eea;
+            font-size: 24pt;
+            text-align: center;
+            margin-bottom: 5pt;
+        }
+        
+        h2 {
+            color: #667eea;
+            font-size: 16pt;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 5pt;
+            margin-top: 20pt;
+        }
+        
+        h3 {
+            color: #764ba2;
+            font-size: 13pt;
+            margin-top: 15pt;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20pt;
+        }
+        
+        .subtitle {
+            color: #666666;
+            font-size: 10pt;
+        }
+        
+        .company-box {
+            background-color: #667eea;
+            color: white;
+            padding: 15pt;
+            margin-bottom: 20pt;
+        }
+        
+        .company-box h2 {
+            color: white;
+            border: none;
+            margin-top: 0;
+        }
+        
+        .score-box {
+            text-align: center;
+            padding: 20pt;
+            background-color: #f0f0f0;
+            margin: 20pt 0;
+        }
+        
+        .big-score {
+            font-size: 60pt;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .level {
+            font-size: 14pt;
+            color: #764ba2;
+            font-weight: bold;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10pt 0;
+        }
+        
+        td {
+            padding: 8pt;
+            border-bottom: 1px solid #dddddd;
+        }
+        
+        .dim-name {
+            font-weight: bold;
+            width: 40%;
+        }
+        
+        .dim-score {
+            font-weight: bold;
+            color: #667eea;
+            text-align: right;
+            width: 20%;
+        }
+        
+        .metrics-table td {
+            text-align: center;
+            padding: 15pt;
+            background-color: #f0f8ff;
+        }
+        
+        .metric-value {
+            font-size: 20pt;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .metric-label {
+            font-size: 9pt;
+            color: #666666;
+        }
+        
+        .recommendation {
+            background-color: #f8f9fa;
+            border-left: 3pt solid #764ba2;
+            padding: 10pt;
+            margin-bottom: 8pt;
+        }
+        
+        .footer {
+            margin-top: 30pt;
+            padding-top: 10pt;
+            border-top: 1pt solid #dddddd;
+            text-align: center;
+            font-size: 8pt;
+            color: #888888;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 AI Maturity Assessment</h1>
+        <div class="subtitle">Отчёт по оценке зрелости искусственного интеллекта</div>
+        <div class="subtitle">Дата формирования: {{ report_date }}</div>
+    </div>
+    
+    <div class="company-info">
+        <h2>{{ company_name }}</h2>
+        <div class="grid">
+            <div class="item">
+                <div class="label">Отрасль</div>
+                <div>{{ industry }}</div>
+            </div>
+            <div class="item">
+                <div class="label">Размер компании</div>
+                <div>{{ company_size }}</div>
+            </div>
+            <div class="item">
+                <div class="label">ID аудита</div>
+                <div>{{ audit_id }}</div>
+            </div>
+            <div class="item">
+                <div class="label">Дата проведения</div>
+                <div>{{ audit_date }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="score-section">
+        <div class="composite-score">{{ "%.1f"|format(composite_score) }}</div>
+        <div class="maturity-level">{{ maturity_level }}</div>
+        <div style="margin-top: 10px; color: #666; font-size: 11pt;">
+            Композитная оценка зрелости ИИ
+        </div>
+    </div>
+    
+    <div>
+        <h2>Оценки по 7 измерениям</h2>
+        <table>
+            {% for dim_id, score in dimension_scores.items() %}
+            <tr>
+                <td class="dim-name">{{ dimension_names[dim_id] }}</td>
+                <td>{{ "%.1f"|format(score) }} / 5.0</td>
+                <td class="dim-score">{{ "%.1f"|format(score) }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    <div>
+        <h2>💼 Оценка бизнес-эффекта</h2>
+        <table class="metrics-table">
+            <tr>
+                <td>
+                    <div class="metric-value">{{ roi_estimate_percent }}%</div>
+                    <div class="metric-label">Ожидаемый ROI</div>
+                </td>
+                <td>
+                    <div class="metric-value">{{ tco_estimate_millions }} млн ₽</div>
+                    <div class="metric-label">Оценка TCO (3 года)</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="recommendations">
+        <h3>🎯 Ключевые рекомендации</h3>
+        {% for rec in recommendations %}
+        <div class="recommendation-item">
+            <strong>{{ rec.priority }}.</strong> {{ rec.text }}
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="footer">
+        <p>Отчёт сформирован автоматически платформой AI Maturity Assessment</p>
+        <p>© 2026 AI Maturity Platform | www.ai-maturity.local</p>
+    </div>
+</body>
+</html>
