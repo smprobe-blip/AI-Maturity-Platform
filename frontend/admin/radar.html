@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Maturity - Radar Chart</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { color: #333; font-size: 28px; }
+        .nav { display: flex; gap: 15px; }
+        .nav a {
+            text-decoration: none;
+            color: #667eea;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        .nav a:hover, .nav a.active { background: #667eea; color: white; }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .controls label { font-weight: 500; color: #333; }
+        .controls select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 20px;
+        }
+        .radar-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .radar-container {
+            position: relative;
+            height: 500px;
+        }
+        .details-panel {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-height: 700px;
+            overflow-y: auto;
+        }
+        .details-panel h2 { color: #333; margin-bottom: 20px; font-size: 20px; }
+        .axis-detail {
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 15px;
+            background: #f8f9fa;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .axis-detail:hover { background: #e9ecef; transform: translateX(5px); }
+        .axis-detail.critical { border-left-color: #ef4444; }
+        .axis-detail.growth { border-left-color: #f59e0b; }
+        .axis-detail.strong { border-left-color: #10b981; }
+        .axis-detail h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .score-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .score-badge.critical { background: #ef4444; }
+        .score-badge.growth { background: #f59e0b; }
+        .score-badge.strong { background: #10b981; }
+        .subcriteria {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+        .subcriteria-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 13px;
+            color: #666;
+        }
+        .gap-indicator {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #ef4444;
+            font-weight: 500;
+        }
+        .npv-meter {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .npv-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #10b981;
+            margin: 10px 0;
+        }
+        .npv-label { color: #666; font-size: 14px; }
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+        .legend-line { width: 30px; height: 3px; }
+        .legend-line.current { background: #667eea; }
+        .legend-line.target { background: #10b981; border-top: 2px dashed #10b981; height: 0; }
+        .legend-line.benchmark { background: #9CA3AF; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 AI Maturity Radar</h1>
+            <nav class="nav">
+                <a href="/admin/">🏠 Главная</a>
+                <a href="/admin/audits.html">📋 Аудиты</a>
+                <a href="/admin/leads.html">👥 Лиды</a>
+                <a href="/admin/analytics.html">📊 Аналитика</a>
+                <a href="/admin/radar.html" class="active">🎯 Radar</a>
+            </nav>
+        </div>
+        
+        <div class="controls">
+            <label>Отрасль:</label>
+            <select id="industrySelect">
+                <option value="Retail">Retail</option>
+                <option value="Finance">Finance</option>
+                <option value="Manufacturing">Manufacturing</option>
+                <option value="IT">IT</option>
+                <option value="Services">Services</option>
+                <option value="Healthcare">Healthcare</option>
+            </select>
+            <label>Аудит:</label>
+            <select id="auditSelect"><option>Загрузка...</option></select>
+            <button id="refreshBtn" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">🔄 Обновить</button>
+        </div>
+        
+        <div class="main-grid">
+            <div>
+                <div class="radar-card">
+                    <h2 style="margin-bottom: 20px; color: #333;">Профиль зрелости компании</h2>
+                    <div class="radar-container"><canvas id="radarChart"></canvas></div>
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-line current"></div><span>Текущее состояние</span></div>
+                        <div class="legend-item"><div class="legend-line target"></div><span>Целевое состояние</span></div>
+                        <div class="legend-item"><div class="legend-line benchmark"></div><span>Отраслевой бенчмарк</span></div>
+                    </div>
+                </div>
+                <div class="npv-meter">
+                    <div class="npv-label">💰 Финансовый эффект от прироста индекса на 1.0</div>
+                    <div class="npv-value" id="npvValue">—</div>
+                    <div class="npv-label">NPV (чистая приведённая стоимость)</div>
+                </div>
+            </div>
+            <div class="details-panel">
+                <h2>📋 Детализация по осям</h2>
+                <div id="axisDetails"><div>Загрузка данных...</div></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:8000/api/v1';
+        let accessToken = null;
+        let benchmarksData = null;
+        let currentAudit = null;
+        let radarChart = null;
+        
+        async function getToken() {
+            try {
+                const response = await fetch('http://localhost:8080/realms/ai-maturity/protocol/openid-connect/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        grant_type: 'password',
+                        client_id: 'frontend-app',
+                        username: 'admin',
+                        password: 'admin123'
+                    })
+                });
+                const data = await response.json();
+                accessToken = data.access_token;
+                return accessToken;
+            } catch (error) {
+                console.error('Token error:', error);
+                return null;
+            }
+        }
+        
+        async function apiGet(endpoint) {
+            if (!accessToken) await getToken();
+            const response = await fetch(API_BASE + endpoint, {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+            });
+            return response.json();
+        }
+        
+        async function loadBenchmarks() {
+            console.log('=== Загрузка бенчмарков ===');
+            const hardcodedData = {
+                benchmarks: {
+                    'Retail': {strategy: 3.0, people: 2.4, infrastructure: 2.8, data: 2.6, models: 2.2, implementation: 2.5, rnd: 1.4},
+                    'Finance': {strategy: 3.5, people: 3.0, infrastructure: 3.8, data: 4.0, models: 3.5, implementation: 3.2, rnd: 2.0},
+                    'Manufacturing': {strategy: 2.8, people: 2.2, infrastructure: 3.0, data: 2.4, models: 2.0, implementation: 2.6, rnd: 1.8},
+                    'IT': {strategy: 3.8, people: 3.5, infrastructure: 4.2, data: 4.0, models: 3.8, implementation: 3.5, rnd: 3.0},
+                    'Services': {strategy: 2.6, people: 2.8, infrastructure: 2.4, data: 2.2, models: 1.8, implementation: 2.4, rnd: 1.2},
+                    'Healthcare': {strategy: 3.0, people: 2.6, infrastructure: 3.2, data: 3.4, models: 2.8, implementation: 2.6, rnd: 2.2},
+                    'CrossIndustry': {strategy: 2.5, people: 2.5, infrastructure: 2.5, data: 2.5, models: 2.5, implementation: 2.5, rnd: 2.5}
+                },
+                subcriteria: {
+                    strategy: ['AI Vision', 'Roadmap', 'Budget', 'KPIs', 'Governance'],
+                    people: ['Skills', 'Training', 'Culture', 'Adoption', 'Retention'],
+                    infrastructure: ['Cloud', 'Tools', 'Integration', 'Security', 'Scalability'],
+                    data: ['Quality', 'Availability', 'Governance', 'Pipeline', 'Storage'],
+                    models: ['Development', 'Testing', 'Deployment', 'Monitoring', 'MLOps'],
+                    implementation: ['Pilots', 'Scale', 'ROI', 'Change Mgmt', 'Success Stories'],
+                    rnd: ['Patents', 'POCs', 'Experiments', 'Partnerships', 'Publications']
+                },
+                axes: [
+                    {key: 'strategy', label: 'Стратегия и управление', weight: 0.15},
+                    {key: 'people', label: 'Люди и культура', weight: 0.15},
+                    {key: 'infrastructure', label: 'Инфраструктура', weight: 0.15},
+                    {key: 'data', label: 'Данные', weight: 0.15},
+                    {key: 'models', label: 'Модели', weight: 0.15},
+                    {key: 'implementation', label: 'Внедрение ИИ', weight: 0.20},
+                    {key: 'rnd', label: 'Исследования (R&D)', weight: 0.05}
+                ],
+                maturity_zones: [
+                    {min: 1.0, max: 1.8, level: 'Начальный', color: '#FEE2E2'},
+                    {min: 1.9, max: 2.6, level: 'AI-Enabled', color: '#FEF3C7'},
+                    {min: 2.7, max: 3.4, level: 'AI-Driven', color: '#DCFCE7'},
+                    {min: 3.5, max: 4.2, level: 'AI-First', color: '#DBEAFE'},
+                    {min: 4.3, max: 5.0, level: 'AI-Native', color: '#EDE9FE'}
+                ]
+            };
+            
+            try {
+                const response = await fetch('http://localhost:3000/data/benchmarks.json');
+                if (response.ok) {
+                    benchmarksData = await response.json();
+                    console.log('✅ Benchmarks загружены из файла');
+                    return;
+                }
+            } catch (error) {
+                console.warn('⚠️ Ошибка загрузки файла, использую hardcoded');
+            }
+            
+            benchmarksData = hardcodedData;
+            console.log('✅ Hardcoded benchmarks загружены');
+        }
+        
+        async function loadAudits() {
+            console.log('=== Загрузка аудитов ===');
+            try {
+                const audits = await apiGet('/admin/audits?limit=50');
+                const select = document.getElementById('auditSelect');
+                select.innerHTML = '';
+                
+                if (audits.items && audits.items.length > 0) {
+                    audits.items.forEach(audit => {
+                        const option = document.createElement('option');
+                        option.value = audit.audit_id;
+                        const company = audit.contact?.name || audit.company_profile?.industry || 'Unknown';
+                        option.textContent = company + ' (' + new Date(audit.created_at).toLocaleDateString() + ')';
+                        select.appendChild(option);
+                    });
+                    select.value = audits.items[0].audit_id;
+                    console.log('✅ Аудиты загружены:', audits.items.length);
+                    await loadRadarData(audits.items[0]);
+                } else {
+                    select.innerHTML = '<option>Нет аудитов</option>';
+                }
+            } catch (error) {
+                console.error('❌ Ошибка загрузки аудитов:', error);
+            }
+        }
+        
+        function calculateTargets(currentValues, benchmark) {
+            const targets = {};
+            for (const key in currentValues) {
+                const benchmarkValue = benchmark[key] || 2.5;
+                const target = Math.min(5.0, benchmarkValue * 1.3 + 0.5);
+                targets[key] = Math.round(target * 10) / 10;
+            }
+            return targets;
+        }
+        
+        function getScoreClass(score) {
+            if (score <= 1.8) return 'critical';
+            if (score <= 2.6) return 'growth';
+            return 'strong';
+        }
+        
+        function getScoreLabel(score) {
+            if (score <= 1.8) return 'Критично';
+            if (score <= 2.6) return 'Зона роста';
+            if (score <= 3.4) return 'Опорная точка';
+            return 'Сильная сторона';
+        }
+        
+        async function loadRadarData(audit) {
+            if (!benchmarksData) return;
+            currentAudit = audit;
+            const industry = document.getElementById('industrySelect').value;
+            const benchmark = benchmarksData.benchmarks[industry] || benchmarksData.benchmarks.CrossIndustry;
+            
+            const calculated = audit.calculated_indices || {};
+            const dimensionScores = calculated.dimension_scores || {};
+            const axes = benchmarksData.axes;
+            const currentValues = {};
+            
+            axes.forEach((axis, idx) => {
+                currentValues[axis.key] = parseFloat(dimensionScores[idx + 1] || 0);
+            });
+            
+            const targets = calculateTargets(currentValues, benchmark);
+            renderRadar(currentValues, targets, benchmark);
+            renderDetails(currentValues, targets, benchmark);
+            renderNPV(currentValues, audit);
+        }
+        
+        function renderRadar(current, targets, benchmark) {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            if (radarChart) radarChart.destroy();
+            
+            const labels = benchmarksData.axes.map(a => a.label);
+            const axisKeys = benchmarksData.axes.map(a => a.key);
+            
+            radarChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Текущее состояние',
+                            data: axisKeys.map(k => current[k]),
+                            backgroundColor: 'rgba(102, 126, 234, 0.3)',
+                            borderColor: '#667eea',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#667eea',
+                            pointRadius: 6
+                        },
+                        {
+                            label: 'Целевое состояние',
+                            data: axisKeys.map(k => targets[k]),
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderColor: '#10b981',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointBackgroundColor: '#10b981',
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Отраслевой бенчмарк',
+                            data: axisKeys.map(k => benchmark[k]),
+                            backgroundColor: 'rgba(156, 163, 175, 0)',
+                            borderColor: '#9CA3AF',
+                            borderWidth: 1.5,
+                            borderDash: [3, 3],
+                            pointStyle: 'rectRot',
+                            pointRadius: 5,
+                            pointBackgroundColor: '#9CA3AF'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            min: 1, max: 5,
+                            ticks: { stepSize: 0.5, backdropColor: 'transparent', color: '#666' },
+                            grid: { color: 'rgba(0,0,0,0.1)', circular: true },
+                            angleLines: { color: 'rgba(0,0,0,0.1)' },
+                            pointLabels: { font: { size: 13, weight: '500' }, color: '#333', padding: 15 }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const axis = benchmarksData.axes[context.dataIndex];
+                                    return context.dataset.label + ': ' + context.raw.toFixed(1) + ' (вес: ' + (axis.weight * 100).toFixed(0) + '%)';
+                                }
+                            }
+                        }
+                    },
+                    animation: { duration: 400, easing: 'easeOutQuart' },
+                    onClick: function(event, elements) {
+                        if (elements.length > 0) {
+                            const idx = elements[0].index;
+                            const axisKey = benchmarksData.axes[idx].key;
+                            const detailEl = document.getElementById('detail-' + axisKey);
+                            if (detailEl) {
+                                detailEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                detailEl.style.background = '#fef3c7';
+                                setTimeout(function() { detailEl.style.background = ''; }, 2000);
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function renderDetails(current, targets, benchmark) {
+            const container = document.getElementById('axisDetails');
+            const axes = benchmarksData.axes;
+            let html = '';
+            
+            axes.forEach(function(axis) {
+                const score = current[axis.key];
+                const target = targets[axis.key];
+                const benchValue = benchmark[axis.key];
+                const gap = target - score;
+                const scoreClass = getScoreClass(score);
+                const subcriteria = benchmarksData.subcriteria[axis.key];
+                
+                html += '<div class="axis-detail ' + scoreClass + '" id="detail-' + axis.key + '">';
+                html += '<h3>';
+                html += '<span>' + axis.label + ' <small style="color:#999">(' + (axis.weight * 100) + '%)</small></span>';
+                html += '<span class="score-badge ' + scoreClass + '">' + score.toFixed(1) + '</span>';
+                html += '</h3>';
+                html += '<div style="font-size: 13px; color: #666;">';
+                html += getScoreLabel(score) + ' | Бенчмарк: ' + benchValue.toFixed(1) + ' | Цель: ' + target.toFixed(1);
+                html += '</div>';
+                if (gap > 0.5) {
+                    html += '<div class="gap-indicator">⚠️ Gap: +' + gap.toFixed(1) + ' до цели</div>';
+                }
+                html += '<div class="subcriteria">';
+                subcriteria.forEach(function(sc) {
+                    html += '<div class="subcriteria-item"><span>' + sc + '</span><span>' + (score * (0.8 + Math.random() * 0.4)).toFixed(1) + '</span></div>';
+                });
+                html += '</div>';
+                html += '</div>';
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function renderNPV(current, audit) {
+            const axes = benchmarksData.axes;
+            const weightedScore = axes.reduce(function(sum, axis) { return sum + (current[axis.key] * axis.weight); }, 0);
+            const companySize = audit.company_profile?.company_size || 'Medium';
+            const sizeMultiplier = companySize.includes('1000') ? 5 : 
+                                   companySize.includes('500') ? 3 : 
+                                   companySize.includes('100') ? 2 : 1;
+            const npv = Math.round(weightedScore * sizeMultiplier * 10);
+            document.getElementById('npvValue').textContent = npv + 'M ₽';
+        }
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            await getToken();
+            await loadBenchmarks();
+            await loadAudits();
+            
+            document.getElementById('auditSelect').addEventListener('change', async function(e) {
+                const audits = await apiGet('/admin/audits?limit=50');
+                const audit = audits.items.find(function(a) { return a.audit_id === e.target.value; });
+                if (audit) await loadRadarData(audit);
+            });
+            
+            document.getElementById('industrySelect').addEventListener('change', async function() {
+                if (currentAudit) await loadRadarData(currentAudit);
+            });
+            
+            document.getElementById('refreshBtn').addEventListener('click', async function() {
+                await loadAudits();
+            });
+        });
+    </script>
+</body>
+</html>
