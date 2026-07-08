@@ -79,18 +79,35 @@ async def send_audit_report(audit_id: str, request: EmailRequest):
     """Send audit report to email."""
     service = AuditService()
     email_service = EmailService()
-    
+
     try:
         # Get audit
         audit = service.get_audit(audit_id)
         
-        # Send email (PDF generation would go here)
+        # Extract data from audit (correct structure)
+        contact = audit.get("contact", {})
+        company_profile = audit.get("company_profile", {})
+        calculated_indices = audit.get("calculated_indices", {})
+        
+        # Form company name from contact or industry
+        company_name = contact.get("name", "Unknown")
+        if not company_name or company_name == "Unknown":
+            industry = company_profile.get("industry", "Unknown Industry")
+            region = company_profile.get("region", "Unknown Region")
+            company_name = f"{industry} - {region}"
+        
+        score = calculated_indices.get("composite_score", 0.0)
+        level = calculated_indices.get("maturity_level", "N/A")
+
+        # Send email
         success = email_service.send_audit_report(
             to_email=request.email,
+            company_name=company_name,
+            score=score,
+            level=level,
             audit_id=audit_id,
-            pdf_path=None,  # PDF generation not implemented yet
         )
-        
+
         if success:
             return {"message": "Report sent successfully", "email": request.email}
         else:
@@ -98,7 +115,7 @@ async def send_audit_report(audit_id: str, request: EmailRequest):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to send email",
             )
-    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -106,15 +123,12 @@ async def send_audit_report(audit_id: str, request: EmailRequest):
         if "not found" in str(e).lower():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Audit not found: {str(e)}",
+                detail=f"Audit {audit_id} not found",
             )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error: {str(e)}",
-            )
-
-
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
 
 @router.get("/benchmarks/{industry}")
 async def get_industry_benchmark(industry: str):

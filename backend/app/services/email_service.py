@@ -70,6 +70,52 @@ class EmailService:
         """
         return self.send_email(to_emails, subject, html_body)
     
+    def send_audit_report(
+        self,
+        to_email: str,
+        company_name: str,
+        score: float,
+        level: str,
+        audit_id: str
+    ) -> bool:
+        """Send audit report email."""
+        subject = f"AI Maturity Assessment Report: {company_name}"
+        html_body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h1 style="color: #667eea;">AI Maturity Assessment Report</h1>
+                
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h2 style="color: #333; margin-top: 0;">{company_name}</h2>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;">Composite Score:</td>
+                            <td style="padding: 8px 0; font-weight: bold; color: #667eea; font-size: 18px;">{score:.1f}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;">Maturity Level:</td>
+                            <td style="padding: 8px 0; font-weight: bold;">{level}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;">Audit ID:</td>
+                            <td style="padding: 8px 0; font-family: monospace; font-size: 12px;">{audit_id}</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <p>Thank you for completing the AI Maturity Assessment!</p>
+                <p>The full detailed report is available in the admin panel.</p>
+                
+                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+                <p style="color: #999; font-size: 12px;">AI Maturity Platform</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return self.send_email([to_email], subject, html_body)
+    
     def get_status(self) -> dict:
         """Get email service status."""
         return {
