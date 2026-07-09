@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Tabs } from '@/components/ui/Tabs';
 import { Button } from '@/components/ui/Button';
 import { Badge, getMaturityBadgeVariant } from '@/components/ui/Badge';
-import { RadarChart } from '@/components/charts/RadarChart';
+import { RadarChartWithBenchmark } from '@/components/charts/RadarChartWithBenchmark';
 import { adminApi } from '@/services/adminApi';
 
 export default function AuditDetailPage() {
@@ -84,7 +84,6 @@ export default function AuditDetailPage() {
 
       <div className="card">
         <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
-
         <div className="mt-6">
           {activeTab === 'metadata' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -113,7 +112,6 @@ export default function AuditDetailPage() {
                   </div>
                 </dl>
               </div>
-
               <div>
                 <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">
                   Контакты
@@ -146,7 +144,6 @@ export default function AuditDetailPage() {
                   </div>
                 </dl>
               </div>
-
               <div className="md:col-span-2 bg-primary-50 rounded-lg p-4">
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
@@ -205,12 +202,27 @@ export default function AuditDetailPage() {
           )}
 
           {activeTab === 'radar' && (
-            <div className="flex justify-center py-6">
-              <RadarChart
-                dimensionScores={audit.calculated_indices?.dimension_scores || {}}
-                width={500}
-                height={500}
-              />
+            <div className="space-y-6">
+              {/* Legend */}
+              <div className="flex justify-center gap-6">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-blue-500 rounded" style={{ opacity: 0.3 }} />
+                  <span className="text-sm text-gray-700">Текущее состояние</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-yellow-500 rounded" style={{ opacity: 0.2 }} />
+                  <span className="text-sm text-gray-700">Целевое состояние</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-green-500 rounded" style={{ opacity: 0.15 }} />
+                  <span className="text-sm text-gray-700">Отраслевой бенчмарк</span>
+                </div>
+              </div>
+              
+              {/* Radar Chart */}
+              <div className="flex justify-center py-6">
+                <RadarChartWithBenchmark audit={audit} />
+              </div>
             </div>
           )}
 

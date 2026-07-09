@@ -9,6 +9,7 @@ import { Badge, getMaturityBadgeVariant } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
+import { Pagination } from '@/components/ui/Pagination';
 import { adminApi, Audit } from '@/services/adminApi';
 import { INDUSTRIES } from '@/utils/constants';
 
@@ -19,14 +20,19 @@ export default function AuditsListPage() {
   const [industry, setIndustry] = useState('');
   const [status, setStatus] = useState('');
   const [archiveTarget, setArchiveTarget] = useState<Audit | null>(null);
+  
+  // Пагинация
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['audits', { industry, status }],
+    queryKey: ['audits', { industry, status, currentPage, pageSize }],
     queryFn: () =>
       adminApi.listAudits({
         industry: industry || undefined,
         status: status || undefined,
-        limit: 100,
+        limit: pageSize,
+        offset: (currentPage - 1) * pageSize,
       }),
   });
 
@@ -47,12 +53,30 @@ export default function AuditsListPage() {
     a.audit_id.includes(search)
   );
 
+  const totalItems = data?.total || 0;
+  const totalPages = data?.total_pages || 0;
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setCurrentPage(1); // Сброс на первую страницу
+  };
+
+  const handleReset = () => {
+    setSearch('');
+    setIndustry('');
+    setStatus('');
+    setCurrentPage(1);
+  };
+
   const columns = [
     {
       key: 'created_at',
       header: 'Дата',
-      render: (a: Audit) =>
-        format(new Date(a.created_at), 'dd.MM.yyyy HH:mm'),
+      render: (a: Audit) => format(new Date(a.created_at), 'dd.MM.yyyy HH:mm'),
       className: 'w-40',
     },
     {
@@ -115,7 +139,7 @@ export default function AuditsListPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Аудиты</h1>
           <p className="text-gray-600 mt-1">
-            Всего: {audits.length} записей
+            Всего: {totalItems} записей
           </p>
         </div>
       </div>
@@ -133,7 +157,6 @@ export default function AuditsListPage() {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
             />
           </div>
-
           <Select
             label="Отрасль"
             value={industry}
@@ -143,7 +166,6 @@ export default function AuditsListPage() {
               ...INDUSTRIES.map((i) => ({ value: i, label: i })),
             ]}
           />
-
           <Select
             label="Статус"
             value={status}
@@ -154,16 +176,11 @@ export default function AuditsListPage() {
               { value: 'archived', label: 'Архивные' },
             ]}
           />
-
           <div className="flex items-end">
             <Button
-              variant="secondary"
-              onClick={() => {
-                setSearch('');
-                setIndustry('');
-                setStatus('');
-              }}
-              className="w-full"
+              variant="outline"
+              onClick={handleReset}
+              className="w-full justify-center"
             >
               <Filter className="w-4 h-4 mr-2" />
               Сбросить
@@ -172,14 +189,27 @@ export default function AuditsListPage() {
         </div>
       </div>
 
-      <Table
-        columns={columns}
-        data={audits}
-        keyExtractor={(a) => a.audit_id}
-        onRowClick={(a) => navigate(`/admin/audits/${a.audit_id}`)}
-        isLoading={isLoading}
-        emptyMessage="Аудиты не найдены"
-      />
+      {/* Table with Pagination */}
+      <div className="bg-white rounded-lg border border-gray-200">
+        <Table
+          columns={columns}
+          data={audits}
+          keyExtractor={(a) => a.audit_id}
+          onRowClick={(a) => navigate(`/admin/audits/${a.audit_id}`)}
+          isLoading={isLoading}
+          emptyMessage="Аудиты не найдены"
+        />
+        
+        {/* Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+        />
+      </div>
 
       {/* Archive modal */}
       <Modal

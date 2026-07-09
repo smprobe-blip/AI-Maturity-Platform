@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+﻿import axios, { AxiosInstance } from 'axios';
 import { keycloak } from '@/auth/keycloak';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -204,7 +204,17 @@ export const adminApi = {
     return data;
   },
 
-  listUsers: async () => {
+  // LEADS
+listLeads: async (params?: { limit?: number; offset?: number }) => {
+  const { data } = await adminClient.get('/leads', { params });
+  return data;
+},
+updateLeadStatus: async (leadId: number, status: string) => {
+  const { data } = await adminClient.patch(`/leads/${leadId}/status`, { status });
+  return data;
+},
+// USERS
+listUsers: async () => {
     const { data } = await adminClient.get('/users');
     return data.items as User[];
   },

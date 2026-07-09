@@ -1,4 +1,4 @@
-"""Public API routes — express calculator (lead magnet)."""
+﻿"""Public API routes — express calculator (lead magnet)."""
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, EmailStr
@@ -41,9 +41,9 @@ async def create_express_audit(data: AuditExpressCreate):
                 "industry": company_profile.get("industry", ""),
                 "company_size": company_profile.get("company_size", ""),
                 "region": company_profile.get("region", ""),
-                "composite_score": int(calculated_indices.get("composite_score", 0)),
+                "composite_score": float(calculated_indices.get("composite_score", 0.0)),
                 "maturity_level": calculated_indices.get("maturity_level", ""),
-                "roi_estimate": int(calculated_indices.get("roi_estimate_percent", 0)),
+                "roi_estimate": float(calculated_indices.get("roi_estimate_percent", 0.0)),
                 "status": "New",
                 "created_at": audit_data.get("created_at", ""),
             }
@@ -167,3 +167,4 @@ async def get_industry_benchmark(industry: str):
             "75": 3.4,
         },
     }
+

@@ -37,29 +37,19 @@ export default function Page3() {
   }, [auditId, calculatedIndices, storedAuditId, navigate]);
 
   const getAuditForRadar = () => {
-    if (auditData) {
-      return {
-        company_profile: {
-          industry: auditData.company_profile?.industry || 'CrossIndustry',
-        },
-        calculated_indices: {
-          dimension_scores: auditData.calculated_indices?.dimension_scores || {},
-        },
-      };
-    }
+    const indices = auditData?.calculated_indices || calculatedIndices;
+    const industry = auditData?.company_profile?.industry || companyProfile?.industry || 'CrossIndustry';
     
-    if (calculatedIndices && companyProfile) {
-      return {
-        company_profile: {
-          industry: companyProfile.industry || 'CrossIndustry',
-        },
-        calculated_indices: {
-          dimension_scores: calculatedIndices.dimension_scores || {},
-        },
-      };
-    }
+    if (!indices || !indices.dimension_scores) return null;
     
-    return null;
+    return {
+      company_profile: {
+        industry: industry,
+      },
+      calculated_indices: {
+        dimension_scores: indices.dimension_scores,
+      },
+    };
   };
 
   const handleSendEmail = async () => {

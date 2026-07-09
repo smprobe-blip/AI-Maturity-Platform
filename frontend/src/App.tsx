@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+﻿import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { KeycloakProvider } from '@/auth/KeycloakProvider';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
 import { ToastProvider } from '@/components/ui/Toast';
@@ -19,6 +19,12 @@ import ExportsPage from '@/pages/admin/ExportsPage';
 import UsersPage from '@/pages/admin/UsersPage';
 import SettingsPage from '@/pages/admin/SettingsPage';
 import AuditLogPage from '@/pages/admin/AuditLogPage';
+import AnalyticsPage from '@/pages/admin/AnalyticsPage';
+import LeadsPage from '@/pages/admin/leads/LeadsPage';
+import ReportsPage from '@/pages/admin/reports/ReportsPage';
+import ProfilePage from '@/pages/admin/profile/ProfilePage';
+import MailingsPage from '@/pages/admin/mailings/MailingsPage';
+import RadarPage from '@/pages/admin/radar/RadarPage';
 
 function App() {
   return (
@@ -46,6 +52,12 @@ function App() {
             <Route path="audits/:auditId" element={<AuditDetailPage />} />
             <Route path="benchmarks" element={<BenchmarksPage />} />
             <Route path="exports" element={<ExportsPage />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="leads" element={<LeadsPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+            <Route path="mailings" element={<MailingsPage />} />
+            <Route path="radar" element={<RadarPage />} />
             <Route path="users" element={<ProtectedRoute requiredRoles={['super_admin']}><UsersPage /></ProtectedRoute>} />
             <Route path="settings" element={<ProtectedRoute requiredRoles={['super_admin']}><SettingsPage /></ProtectedRoute>} />
             <Route path="audit-log" element={<ProtectedRoute requiredRoles={['super_admin']}><AuditLogPage /></ProtectedRoute>} />
