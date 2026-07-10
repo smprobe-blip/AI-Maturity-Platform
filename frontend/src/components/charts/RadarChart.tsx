@@ -1,170 +1,242 @@
 import { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-
-interface RadarDataPoint {
-  axis: string;
-  key: string;
-  current: number;
-  target: number;
-  benchmark: number;
-  weight: number;
-}
+import { MATURITY_ZONES } from '@/types';
 
 interface RadarChartProps {
-  data: RadarDataPoint[];
-  width?: number;
-  height?: number;
+  dimensionScores: Record<string, number>;
+  targetScores?: Record<string, number>;
+  benchmarkScores?: Record<string, number>;
+  maxValue?: number;
+  showGap?: boolean;
 }
 
-export const RadarChart: React.FC<RadarChartProps> = ({
-  data,
-  width = 500,
-  height = 500,
-}) => {
+const DIMENSION_LABELS: Record<string, string> = {
+  '1': 'Стратегия',
+  '2': 'Люди',
+  '3': 'Инфра',
+  '4': 'Данные',
+  '5': 'Модели',
+  '6': 'Внедрение',
+  '7': 'R&D',
+};
+
+const DIMENSION_ORDER = ['1', '2', '3', '4', '5', '6', '7'];
+
+export function RadarChart({
+  dimensionScores,
+  targetScores,
+  benchmarkScores,
+  maxValue = 5,
+  showGap = true,
+}: RadarChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    if (!svgRef.current || !data || data.length === 0) return;
+    if (!svgRef.current) return;
+
+    const width = 500;
+    const height = 500;
+    const margin = 70;
+    const radius = Math.min(width, height) / 2 - margin;
+
+    const axes = DIMENSION_ORDER;
+    const angleSlice = (Math.PI * 2) / axes.length;
 
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
+    svg.attr('viewBox', '0 0 ' + width + ' ' + height);
 
-    const margin = 80;
-    const radius = Math.min(width, height) / 2 - margin;
-    const levels = 5;
-    const angleSlice = (Math.PI * 2) / data.length;
+    const g = svg.append('g').attr('transform', 'translate(' + (width / 2) + ',' + (height / 2) + ')');
 
-    const g = svg
-      .append('g')
-      .attr('transform', `translate(${width / 2}, ${height / 2})`);
-
-    // Background circles (grid)
-    for (let level = 1; level <= levels; level++) {
+    // === 1. Концентрические зоны зрелости (Concept v5.0 Table 3.2) ===
+    MATURITY_ZONES.slice().reverse().forEach((zone) => {
+      const outerRadius = (zone.max / maxValue) * radius;
       g.append('circle')
-        .attr('r', (radius / levels) * level)
-        .style('fill', 'none')
-        .style('stroke', '#e5e7eb')
-        .style('stroke-width', '1px')
-        .style('stroke-dasharray', level === levels ? '0' : '3,3');
+        .attr('r', outerRadius)
+        .attr('fill', zone.color)
+        .attr('opacity', 0.4)
+        .attr('stroke', 'none');
+    });
+
+    // Подписи зон (справа)
+    MATURITY_ZONES.forEach((zone) => {
+      const midRadius = ((zone.min + zone.max) / 2 / maxValue) * radius;
+      g.append('text')
+        .attr('x', radius + 10)
+        .attr('y', -midRadius)
+        .attr('text-anchor', 'start')
+        .attr('dominant-baseline', 'middle')
+        .attr('class', 'text-[9px] fill-gray-600 font-medium')
+        .text(zone.name + ' (' + zone.min.toFixed(1) + '-' + zone.max.toFixed(1) + ')');
+    });
+
+    // === 2. Оси ===
+    axes.forEach((axis, i) => {
+      const angle = angleSlice * i - Math.PI / 2;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+
+      g.append('line')
+        .attr('x1', 0).attr('y1', 0)
+        .attr('x2', x).attr('y2', y)
+        .attr('stroke', '#9CA3AF')
+        .attr('stroke-width', 1);
+
+      const labelX = Math.cos(angle) * (radius + 35);
+      const labelY = Math.sin(angle) * (radius + 35);
+
+      g.append('text')
+        .attr('x', labelX)
+        .attr('y', labelY)
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'middle')
+        .attr('class', 'text-xs fill-gray-800 font-semibold')
+        .text(DIMENSION_LABELS[axis] || axis);
+
+      // Пульсация критичных осей (score <= 1.8)
+      const score = dimensionScores[axis] || 0;
+      if (score <= 1.8) {
+        const pointX = Math.cos(angle) * (score / maxValue) * radius;
+        const pointY = Math.sin(angle) * (score / maxValue) * radius;
+        g.append('circle')
+          .attr('cx', pointX)
+          .attr('cy', pointY)
+          .attr('r', 6)
+          .attr('fill', '#EF4444')
+          .attr('opacity', 0.8)
+          .append('animate')
+          .attr('attributeName', 'r')
+          .attr('values', '6;12;6')
+          .attr('dur', '1.5s')
+          .attr('repeatCount', 'indefinite');
+      }
+    });
+
+    // === 3. Слой бенчмарка (серый пунктир) ===
+    if (benchmarkScores) {
+      const benchPoints = axes.map((axis, i) => {
+        const value = benchmarkScores[axis] || 0;
+        const r = (value / maxValue) * radius;
+        const angle = angleSlice * i - Math.PI / 2;
+        return [Math.cos(angle) * r, Math.sin(angle) * r];
+      });
+
+      g.append('path')
+        .datum(benchPoints)
+        .attr('d', d3.line().curve(d3.curveLinearClosed) as any)
+        .attr('fill', 'none')
+        .attr('stroke', '#9CA3AF')
+        .attr('stroke-width', 1.5)
+        .attr('stroke-dasharray', '5,5');
+
+      // Ромбы на бенчмарке
+      benchPoints.forEach(([x, y]) => {
+        g.append('path')
+          .attr('d', d3.symbol().type(d3.symbolDiamond).size(40) as any)
+          .attr('transform', 'translate(' + x + ',' + y + ')')
+          .attr('fill', '#9CA3AF');
+      });
     }
 
-    // Axes
-    const axisGrid = g.append('g').attr('class', 'axis');
-    axisGrid
-      .selectAll('.axis-line')
-      .data(data)
-      .enter()
-      .append('line')
-      .attr('x1', 0)
-      .attr('y1', 0)
-      .attr('x2', (d, i) => radius * Math.cos(angleSlice * i - Math.PI / 2))
-      .attr('y2', (d, i) => radius * Math.sin(angleSlice * i - Math.PI / 2))
-      .style('stroke', '#e5e7eb')
-      .style('stroke-width', '1px');
+    // === 4. Слой целевого состояния (зелёный пунктир) ===
+    if (targetScores) {
+      const targetPoints = axes.map((axis, i) => {
+        const value = targetScores[axis] || 0;
+        const r = (value / maxValue) * radius;
+        const angle = angleSlice * i - Math.PI / 2;
+        return [Math.cos(angle) * r, Math.sin(angle) * r];
+      });
 
-    // Labels
-    axisGrid
-      .selectAll('.label')
-      .data(data)
-      .enter()
-      .append('text')
-      .attr('class', 'label')
-      .attr('text-anchor', 'middle')
-      .attr('dy', '0.35em')
-      .attr('x', (d, i) => (radius + 30) * Math.cos(angleSlice * i - Math.PI / 2))
-      .attr('y', (d, i) => (radius + 30) * Math.sin(angleSlice * i - Math.PI / 2))
-      .text((d) => d.axis)
-      .style('font-size', '12px')
-      .style('font-weight', '600')
-      .style('fill', '#374151');
+      g.append('path')
+        .datum(targetPoints)
+        .attr('d', d3.line().curve(d3.curveLinearClosed) as any)
+        .attr('fill', 'none')
+        .attr('stroke', '#10B981')
+        .attr('stroke-width', 2)
+        .attr('stroke-dasharray', '4,4');
+    }
 
-    // Helper function to create radar line
-    const createRadarLine = (getValue: (d: RadarDataPoint) => number) => {
-      return d3
-        .lineRadial<RadarDataPoint>()
-        .radius((d) => (getValue(d) / 5) * radius)
-        .angle((d, i) => i * angleSlice)
-        .curve(d3.curveLinearClosed);
-    };
+    // === 5. Gap-зона (красные штрихи между current и target) ===
+    if (showGap && targetScores) {
+      axes.forEach((axis, i) => {
+        const current = dimensionScores[axis] || 0;
+        const target = targetScores[axis] || 0;
+        if (target > current) {
+          const angle = angleSlice * i - Math.PI / 2;
+          const r1 = (current / maxValue) * radius;
+          const r2 = (target / maxValue) * radius;
+          const x1 = Math.cos(angle) * r1;
+          const y1 = Math.sin(angle) * r1;
+          const x2 = Math.cos(angle) * r2;
+          const y2 = Math.sin(angle) * r2;
+          g.append('line')
+            .attr('x1', x1).attr('y1', y1)
+            .attr('x2', x2).attr('y2', y2)
+            .attr('stroke', '#EF4444')
+            .attr('stroke-width', 2)
+            .attr('stroke-dasharray', '2,2')
+            .attr('opacity', 0.6);
+        }
+      });
+    }
 
-    // 1. Benchmark layer (green) - bottom
-    const benchmarkLine = createRadarLine((d) => d.benchmark);
+    // === 6. Слой текущего состояния (синий, основной) ===
+    const currentPoints = axes.map((axis, i) => {
+      const value = dimensionScores[axis] || 0;
+      const r = (value / maxValue) * radius;
+      const angle = angleSlice * i - Math.PI / 2;
+      return [Math.cos(angle) * r, Math.sin(angle) * r];
+    });
+
     g.append('path')
-      .datum(data)
-      .attr('class', 'radar-benchmark')
-      .attr('d', benchmarkLine as any)
-      .style('fill', '#10b981')
-      .style('fill-opacity', 0.15)
-      .style('stroke', '#10b981')
-      .style('stroke-width', '2px')
-      .style('stroke-dasharray', '5,3');
+      .datum(currentPoints)
+      .attr('d', d3.line().curve(d3.curveLinearClosed) as any)
+      .attr('fill', 'rgba(59, 130, 246, 0.25)')
+      .attr('stroke', '#2563eb')
+      .attr('stroke-width', 2.5);
 
-    // 2. Target layer (orange) - middle
-    const targetLine = createRadarLine((d) => d.target);
-    g.append('path')
-      .datum(data)
-      .attr('class', 'radar-target')
-      .attr('d', targetLine as any)
-      .style('fill', '#f59e0b')
-      .style('fill-opacity', 0.2)
-      .style('stroke', '#f59e0b')
-      .style('stroke-width', '2px')
-      .style('stroke-dasharray', '4,2');
+    // Точки текущего состояния (цвет по зоне зрелости)
+    currentPoints.forEach(([x, y], i) => {
+      const axis = axes[i];
+      const score = dimensionScores[axis] || 0;
+      const color = score <= 1.8 ? '#EF4444'
+        : score <= 2.6 ? '#F59E0B'
+        : score <= 3.4 ? '#10B981'
+        : '#2563eb';
 
-    // 3. Current layer (blue) - top
-    const currentLine = createRadarLine((d) => d.current);
-    g.append('path')
-      .datum(data)
-      .attr('class', 'radar-current')
-      .attr('d', currentLine as any)
-      .style('fill', '#3b82f6')
-      .style('fill-opacity', 0.3)
-      .style('stroke', '#3b82f6')
-      .style('stroke-width', '2.5px');
+      g.append('circle')
+        .attr('cx', x).attr('cy', y)
+        .attr('r', 5)
+        .attr('fill', color)
+        .attr('stroke', 'white')
+        .attr('stroke-width', 2);
+    });
 
-    // Data points for current
-    g.selectAll('.dot-current')
-      .data(data)
-      .enter()
-      .append('circle')
-      .attr('class', 'dot-current')
-      .attr('r', 6)
-      .attr('cx', (d, i) => (d.current / 5) * radius * Math.cos(angleSlice * i - Math.PI / 2))
-      .attr('cy', (d, i) => (d.current / 5) * radius * Math.sin(angleSlice * i - Math.PI / 2))
-      .style('fill', '#3b82f6')
-      .style('stroke', '#fff')
-      .style('stroke-width', '2px');
+    // === 7. Легенда ===
+    const legend = g.append('g').attr('transform', 'translate(' + (-width / 2 + 10) + ',' + (height / 2 - 80) + ')');
 
-    // Score labels for current
-    g.selectAll('.score-label')
-      .data(data)
-      .enter()
-      .append('text')
-      .attr('class', 'score-label')
-      .attr('text-anchor', 'middle')
-      .attr('dy', '-12px')
-      .attr('x', (d, i) => (d.current / 5) * radius * Math.cos(angleSlice * i - Math.PI / 2))
-      .attr('y', (d, i) => (d.current / 5) * radius * Math.sin(angleSlice * i - Math.PI / 2))
-      .text((d) => d.current.toFixed(1))
-      .style('font-size', '12px')
-      .style('font-weight', 'bold')
-      .style('fill', '#1e40af');
+    const legendItems = [
+      { label: 'Текущее', color: '#2563eb', dash: '' },
+      { label: 'Целевое', color: '#10B981', dash: '4,4' },
+      { label: 'Бенчмарк', color: '#9CA3AF', dash: '5,5' },
+    ];
 
-  }, [data, width, height]);
+    legendItems.forEach((item, i) => {
+      const y = i * 18;
+      legend.append('line')
+        .attr('x1', 0).attr('y1', y)
+        .attr('x2', 20).attr('y2', y)
+        .attr('stroke', item.color)
+        .attr('stroke-width', 2)
+        .attr('stroke-dasharray', item.dash);
+      legend.append('text')
+        .attr('x', 26).attr('y', y)
+        .attr('dominant-baseline', 'middle')
+        .attr('class', 'text-xs fill-gray-700')
+        .text(item.label);
+    });
 
-  if (!data || data.length === 0) {
-    return (
-      <div className="flex justify-center items-center" style={{ width, height }}>
-        <div className="text-gray-400 text-center">
-          <p className="text-sm">Нет данных для отображения</p>
-        </div>
-      </div>
-    );
-  }
+  }, [dimensionScores, targetScores, benchmarkScores, maxValue, showGap]);
 
-  return (
-    <div className="flex justify-center">
-      <svg ref={svgRef} width={width} height={height} />
-    </div>
-  );
-};
+  return <svg ref={svgRef} className="w-full max-w-lg mx-auto" />;
+}

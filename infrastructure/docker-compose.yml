@@ -1,7 +1,6 @@
-#version: '3.8'
-
+version: '3.8'
 services:
-  # Backend API
+  # === BACKEND ===
   backend:
     build:
       context: ../backend
@@ -16,7 +15,7 @@ services:
       - BACKEND_HOST=0.0.0.0
       - BACKEND_PORT=8000
       - BACKEND_CORS_ORIGINS=http://localhost:3000,http://localhost:8000
-      - YANDEX_S3_ENDPOINT=http://minio:9000 
+      - YANDEX_S3_ENDPOINT=http://minio:9000
       - YANDEX_S3_ACCESS_KEY=minioadmin
       - YANDEX_S3_SECRET_KEY=minioadmin
       - YANDEX_S3_BUCKET=ai-maturity-data
@@ -40,7 +39,7 @@ services:
       - LOGS_PATH=/data_storage/logs
     volumes:
       - ../data_storage:/data_storage
-      - ../backend:/app
+      - ../backend/app:/app/app
     depends_on:
       - minio
       - mailhog
@@ -48,7 +47,7 @@ services:
       - ai-maturity-network
     restart: unless-stopped
 
-  # Frontend
+  # === FRONTEND ===
   frontend:
     build:
       context: ../frontend
@@ -65,7 +64,7 @@ services:
       - ai-maturity-network
     restart: unless-stopped
 
-  # MinIO (S3-compatible storage)
+  # === MINIO (S3-compatible storage) ===
   minio:
     image: minio/minio:latest
     container_name: ai-maturity-minio
@@ -82,18 +81,18 @@ services:
       - ai-maturity-network
     restart: unless-stopped
 
-  # MailHog (SMTP testing)
+  # === MAILHOG (SMTP testing) ===
   mailhog:
     image: mailhog/mailhog:latest
     container_name: ai-maturity-mailhog
     ports:
-      - "1025:1025"  # SMTP
-      - "8025:8025"  # Web UI
+      - "1025:1025"
+      - "8025:8025"
     networks:
       - ai-maturity-network
     restart: unless-stopped
 
-  # Baserow (CRM)
+  # === BASEROW (CRM) ===
   baserow:
     image: baserow/baserow:1.22.3
     container_name: ai-maturity-baserow
@@ -106,15 +105,14 @@ services:
       - DATABASE_PASSWORD=baserow
       - DATABASE_HOST=baserow-db
       - DATABASE_PORT=5432
-    volumes:
-      - baserow_data:/baserow/data
     depends_on:
       - baserow-db
+    volumes:
+      - baserow_data:/baserow/data
     networks:
       - ai-maturity-network
     restart: unless-stopped
 
-  # Baserow Database
   baserow-db:
     image: postgres:15
     container_name: ai-maturity-baserow-db
@@ -128,7 +126,7 @@ services:
       - ai-maturity-network
     restart: unless-stopped
 
-  # Keycloak (Auth)
+  # === KEYCLOAK (Auth) ===
   keycloak:
     image: quay.io/keycloak/keycloak:24.0
     container_name: ai-maturity-keycloak
@@ -149,7 +147,6 @@ services:
       - ai-maturity-network
     restart: unless-stopped
 
-  # Keycloak Database
   keycloak-db:
     image: postgres:15
     container_name: ai-maturity-keycloak-db

@@ -1,170 +1,116 @@
-﻿"""Public API routes — express calculator (lead magnet)."""
-
+"""Public API endpoints for entry calculator.
+v1.1 — Priority 1: 35 questions, report_type, target_scores, pdn_consent.
+"""
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, EmailStr
-import structlog
-
-from app.models.audit import AuditExpressCreate, AuditExpressResponse
+from app.models.schemas import (
+    AuditResponse,
+    BenchmarkResponse,
+    EmailReportRequest,
+    ExpressAuditRequest,
+)
 from app.services.audit_service import AuditService
 from app.services.email_service import EmailService
-from app.services.lead_service import lead_service
+import structlog
 
 logger = structlog.get_logger()
-router = APIRouter()
+
+# ВАЖНО: prefix НЕ указываем здесь — он добавляется в main.py
+router = APIRouter(tags=["public"])
+
+_audit_service = AuditService()
+_email_service = EmailService()
 
 
-class EmailRequest(BaseModel):
-    """Email request model."""
-    email: EmailStr
-
-
-@router.post("/audits/express", response_model=AuditExpressResponse, status_code=status.HTTP_201_CREATED)
-async def create_express_audit(data: AuditExpressCreate):
-    """Create express audit (public calculator)."""
-    service = AuditService()
+@router.post(
+    "/audits/express",
+    response_model=AuditResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create express audit (35 questions)",
+)
+async def create_express_audit(req: ExpressAuditRequest) -> AuditResponse:
+    """Create new express maturity audit.
     
+    Accepts nested responses (35 questions) or flat format (7 scores).
+    Returns calculated indices with pattern diagnosis, top-3, upsell triggers.
+    """
     try:
-        audit_data = service.create_express_audit(data)
-        logger.info("audit_created", audit_id=audit_data["audit_id"])
-        
-        # === Автоматическое создание лида в Baserow ===
-        try:
-            calculated_indices = audit_data.get("calculated_indices", {})
-            company_profile = audit_data.get("company_profile", {})
-            contact = audit_data.get("contact", {})
-            
-            lead_data = {
-                "audit_id": audit_data["audit_id"],
-                "name": contact.get("name", "Unknown"),
-                "email": contact.get("email", ""),
-                "position": contact.get("position", ""),
-                "industry": company_profile.get("industry", ""),
-                "company_size": company_profile.get("company_size", ""),
-                "region": company_profile.get("region", ""),
-                "composite_score": float(calculated_indices.get("composite_score", 0.0)),
-                "maturity_level": calculated_indices.get("maturity_level", ""),
-                "roi_estimate": float(calculated_indices.get("roi_estimate_percent", 0.0)),
-                "status": "New",
-                "created_at": audit_data.get("created_at", ""),
-            }
-            
-            logger.info("creating_lead", audit_id=audit_data["audit_id"])
-            lead_result = lead_service.create_lead(lead_data)
-            
-            if lead_result:
-                logger.info("lead_created_from_audit", 
-                           audit_id=audit_data["audit_id"], 
-                           lead_id=lead_result.get("id"))
-            else:
-                logger.warning("lead_creation_failed", audit_id=audit_data["audit_id"])
-        except Exception as lead_error:
-            # Не блокируем создание аудита из-за ошибки лида
-            logger.error("lead_creation_error", 
-                        audit_id=audit_data["audit_id"], 
-                        error=str(lead_error), 
-                        exc_info=True)
-        # === КОНЕЦ БЛОКА СОЗДАНИЯ ЛИДА ===
-        
-        return AuditExpressResponse(
-            audit_id=audit_data["audit_id"],
-            created_at=audit_data["created_at"],
-            calculated_indices=audit_data["calculated_indices"],
-            message="Аудит успешно завершён! Отчёт отправлен на вашу почту.",
-        )
-    
+        return _audit_service.create_express_audit(req)
     except Exception as e:
         logger.error("audit_creation_failed", error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create audit: {str(e)}",
+            detail={"error": {"code": "AUDIT_CREATION_FAILED", "message": str(e)}},
         )
 
 
-@router.get("/audits/{audit_id}")
-async def get_audit(audit_id: str):
-    """Get audit by ID."""
-    service = AuditService()
-    
-    try:
-        audit = service.get_audit(audit_id)
-        return audit
-    
-    except Exception as e:
+@router.get(
+    "/audits/{audit_id}",
+    response_model=AuditResponse,
+    summary="Get audit by ID",
+)
+async def get_audit(audit_id: str) -> AuditResponse:
+    """Load existing audit results by ID."""
+    audit = _audit_service.get_audit(audit_id)
+    if not audit:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Audit not found: {str(e)}",
+            detail={"error": {"code": "AUDIT_NOT_FOUND", "message": f"Audit {audit_id} not found"}},
         )
+    return audit
 
 
-@router.post("/audits/{audit_id}/email")
-async def send_audit_report(audit_id: str, request: EmailRequest):
-    """Send audit report to email."""
-    service = AuditService()
-    email_service = EmailService()
-
-    try:
-        # Get audit
-        audit = service.get_audit(audit_id)
-        
-        # Extract data from audit (correct structure)
-        contact = audit.get("contact", {})
-        company_profile = audit.get("company_profile", {})
-        calculated_indices = audit.get("calculated_indices", {})
-        
-        # Form company name from contact or industry
-        company_name = contact.get("name", "Unknown")
-        if not company_name or company_name == "Unknown":
-            industry = company_profile.get("industry", "Unknown Industry")
-            region = company_profile.get("region", "Unknown Region")
-            company_name = f"{industry} - {region}"
-        
-        score = calculated_indices.get("composite_score", 0.0)
-        level = calculated_indices.get("maturity_level", "N/A")
-
-        # Send email
-        success = email_service.send_audit_report(
-            to_email=request.email,
-            company_name=company_name,
-            score=score,
-            level=level,
-            audit_id=audit_id,
+@router.post(
+    "/audits/{audit_id}/email",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Email audit report",
+)
+async def email_audit_report(audit_id: str, req: EmailReportRequest) -> dict:
+    """Send audit report to specified email."""
+    audit = _audit_service.get_audit(audit_id)
+    if not audit:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": {"code": "AUDIT_NOT_FOUND"}},
         )
-
-        if success:
-            return {"message": "Report sent successfully", "email": request.email}
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to send email",
-            )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        # Check if it's "audit not found" error
-        if "not found" in str(e).lower():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Audit {audit_id} not found",
-            )
+    
+    body = (
+        f"Здравствуйте!\n\n"
+        f"Ваш отчёт по оценке ИИ-зрелости готов.\n\n"
+        f"ID аудита: {audit_id}\n"
+        f"Комплексная оценка: {audit.calculated_indices.composite_score:.2f} / 5.00\n"
+        f"Уровень зрелости: {audit.calculated_indices.maturity_level}\n\n"
+        f"Рекомендации:\n" +
+        "\n".join(f"• {r}" for r in audit.recommendations) +
+        f"\n\nОткрыть полную версию: http://localhost:3000/results/{audit_id}\n"
+    )
+    
+    success = _email_service.send_report(req.email, audit_id, body)
+    if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
+            detail={"error": {"code": "EMAIL_SEND_FAILED"}},
         )
+    
+    return {"status": "accepted", "message": "Report queued for delivery"}
 
 
-@router.get("/benchmarks/{industry}")
-async def get_industry_benchmark(industry: str):
-    """Get industry benchmark data."""
-    return {
-        "industry": industry,
-        "average_score": 2.8,
-        "median_score": 2.7,
-        "sample_size": 150,
-        "percentiles": {
-            "25": 2.1,
-            "50": 2.7,
-            "75": 3.4,
-        },
-    }
-
+@router.get(
+    "/benchmarks/{industry}",
+    response_model=BenchmarkResponse,
+    summary="Get industry benchmark",
+)
+async def get_benchmark(industry: str) -> BenchmarkResponse:
+    """Get industry benchmark data.
+    
+    Returns mean scores and percentiles for the specified industry.
+    TODO: Calculate from DuckDB when enough data (min N≥30).
+    """
+    # Stub — will be replaced by benchmark_service.py in Priority 2
+    return BenchmarkResponse(
+        industry=industry,
+        sample_size=0,
+        dimension_means={str(i): 0.0 for i in range(1, 8)},
+        composite_mean=0.0,
+        composite_median=0.0,
+        percentiles={"p25": 0.0, "p50": 0.0, "p75": 0.0},
+    )
