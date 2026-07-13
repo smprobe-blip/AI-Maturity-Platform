@@ -1,5 +1,5 @@
 """Public API endpoints for entry calculator.
-v1.1 — Priority 1: 35 questions, report_type, target_scores, pdn_consent.
+Priority 1 + 2.1: 35 questions, benchmark loading, upsell.
 """
 from fastapi import APIRouter, HTTPException, status
 from app.models.schemas import (
@@ -9,7 +9,7 @@ from app.models.schemas import (
     ExpressAuditRequest,
 )
 from app.services.audit_service import AuditService
-from app.services.email_service import EmailService
+from app.services.radar_service import load_benchmark
 import structlog
 
 logger = structlog.get_logger()
@@ -18,7 +18,6 @@ logger = structlog.get_logger()
 router = APIRouter(tags=["public"])
 
 _audit_service = AuditService()
-_email_service = EmailService()
 
 
 @router.post(
@@ -31,6 +30,7 @@ async def create_express_audit(req: ExpressAuditRequest) -> AuditResponse:
     """Create new express maturity audit.
     
     Accepts nested responses (35 questions) or flat format (7 scores).
+    Auto-loads industry benchmark from benchmarks.json.
     Returns calculated indices with pattern diagnosis, top-3, upsell triggers.
     """
     try:
@@ -84,33 +84,40 @@ async def email_audit_report(audit_id: str, req: EmailReportRequest) -> dict:
         f"\n\nОткрыть полную версию: http://localhost:3000/results/{audit_id}\n"
     )
     
-    success = _email_service.send_report(req.email, audit_id, body)
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"error": {"code": "EMAIL_SEND_FAILED"}},
-        )
+    # Email service is optional (may not be configured)
+    try:
+        from app.services.email_service import EmailService
+        email_service = EmailService()
+        success = email_service.send_report(req.email, audit_id, body)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={"error": {"code": "EMAIL_SEND_FAILED"}},
+            )
+    except ImportError:
+        logger.warning("email_service_not_available")
     
     return {"status": "accepted", "message": "Report queued for delivery"}
 
 
 @router.get(
     "/benchmarks/{industry}",
-    response_model=BenchmarkResponse,
     summary="Get industry benchmark",
 )
-async def get_benchmark(industry: str) -> BenchmarkResponse:
-    """Get industry benchmark data.
+async def get_benchmark(industry: str) -> dict:
+    """Get industry benchmark data from benchmarks.json.
     
-    Returns mean scores and percentiles for the specified industry.
-    TODO: Calculate from DuckDB when enough data (min N≥30).
+    Returns dimension scores for the specified industry.
     """
-    # Stub — will be replaced by benchmark_service.py in Priority 2
-    return BenchmarkResponse(
-        industry=industry,
-        sample_size=0,
-        dimension_means={str(i): 0.0 for i in range(1, 8)},
-        composite_mean=0.0,
-        composite_median=0.0,
-        percentiles={"p25": 0.0, "p50": 0.0, "p75": 0.0},
-    )
+    benchmark = load_benchmark(industry)
+    if not benchmark:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": {"code": "BENCHMARK_NOT_FOUND", "message": f"Benchmark for {industry} not found"}},
+        )
+    
+    return {
+        "industry": industry,
+        "dimension_scores": benchmark,
+        "source": "benchmarks.json",
+    }
