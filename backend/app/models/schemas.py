@@ -200,6 +200,7 @@ class CalculatedIndices(BaseModel):
 
     # Priority 1: Gap analysis (current vs target)
     gap_analysis: Optional[GapAnalysis] = None
+    benchmark_scores: Optional[Dict[str, float]] = None  # Industry benchmark
 
 
 class AuditResponse(BaseModel):

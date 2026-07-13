@@ -40,6 +40,7 @@ class AuditService:
         indices, upsell_triggers = calculate_indices(
             responses=req.responses,
             company_size=req.company_size,
+            company_industry=req.company_industry,
             target_scores=req.target_scores,
             benchmark_scores=None,  # TODO: load from benchmark_service
         )
