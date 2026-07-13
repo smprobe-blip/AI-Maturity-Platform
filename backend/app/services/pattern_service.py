@@ -1,18 +1,10 @@
 """Dynamic pattern detection for radar chart diagnosis.
-Implements 5 patterns from Concept v5.0 Table 3.3:
-1. Compressed circle (all axes 1-2) -> "System immaturity"
-2. Right skew (Data/Models high, People low) -> "Technocratic skew"
-3. Left skew (Strategy high, Implementation low) -> "Strategy without execution"
-4. Star with gaps (1-2 weak axes) -> "Point bottlenecks"
-5. Benchmark parity -> "No differentiation risk"
+Implements 5 patterns from Concept v5.0 Table 3.3.
 """
 from typing import Dict, List, Optional
 from app.models.schemas import PatternInfo
 
 
-
-
-# Dimension mapping (v6.0 order)
 DIMENSIONS = {
     '1': {'name': 'Стратегия и управление', 'weight': 0.15, 'group': 'governance'},
     '2': {'name': 'Люди и культура', 'weight': 0.15, 'group': 'people'},
@@ -36,7 +28,6 @@ def detect_pattern(
     scores = [dimension_scores.get(str(i), 0.0) for i in range(1, 8)]
     avg = _avg(scores)
 
-    # Pattern 1: Compressed circle (all axes 1-2)
     if all(s <= 2.0 for s in scores):
         return PatternInfo(
             pattern_type='compressed_circle',
@@ -48,9 +39,8 @@ def detect_pattern(
             severity='critical',
         )
 
-    # Pattern 2: Right skew (Tech high, People low)
-    tech_avg = _avg([scores[2], scores[3], scores[4]])  # Infra, Data, Models
-    people_score = scores[1]  # People & Culture
+    tech_avg = _avg([scores[2], scores[3], scores[4]])
+    people_score = scores[1]
     if tech_avg - people_score > 1.2:
         return PatternInfo(
             pattern_type='right_skew',
@@ -62,9 +52,8 @@ def detect_pattern(
             severity='warning',
         )
 
-    # Pattern 3: Left skew (Strategy high, Implementation low)
     strategy_score = scores[0]
-    implementation_score = scores[5]  # AI Implementation
+    implementation_score = scores[5]
     if strategy_score - implementation_score > 1.2:
         return PatternInfo(
             pattern_type='left_skew',
@@ -76,7 +65,6 @@ def detect_pattern(
             severity='warning',
         )
 
-    # Pattern 4: Star with gaps (1-2 weak axes)
     weak_axes = [str(i + 1) for i, s in enumerate(scores) if s <= 2.0]
     if 1 <= len(weak_axes) <= 2 and avg >= 3.0:
         weak_names = [DIMENSIONS[wid]['name'] for wid in weak_axes]
@@ -90,7 +78,6 @@ def detect_pattern(
             severity='warning',
         )
 
-    # Pattern 5: Benchmark parity (no differentiation)
     if benchmark_scores:
         bench_scores = [benchmark_scores.get(str(i), 0.0) for i in range(1, 8)]
         deviations = [abs(s - b) for s, b in zip(scores, bench_scores)]
@@ -106,7 +93,6 @@ def detect_pattern(
                 severity='info',
             )
 
-    # Default: Balanced
     return PatternInfo(
         pattern_type='balanced',
         diagnosis='Сбалансированное развитие',

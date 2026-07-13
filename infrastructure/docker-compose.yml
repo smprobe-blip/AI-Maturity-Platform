@@ -40,6 +40,7 @@ services:
     volumes:
       - ../data_storage:/data_storage
       - ../backend/app:/app/app
+      - ../frontend/data:/app/frontend/data:ro
     depends_on:
       - minio
       - mailhog
