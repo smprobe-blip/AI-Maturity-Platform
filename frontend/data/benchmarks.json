@@ -65,135 +65,28 @@
     }
   },
   "subcriteria": {
-    "strategy": [
-      "AI Vision",
-      "Roadmap",
-      "Budget",
-      "KPIs",
-      "Governance"
-    ],
-    "people": [
-      "Skills",
-      "Training",
-      "Culture",
-      "Adoption",
-      "Retention"
-    ],
-    "infrastructure": [
-      "Cloud",
-      "Tools",
-      "Integration",
-      "Security",
-      "Scalability"
-    ],
-    "data": [
-      "Quality",
-      "Availability",
-      "Governance",
-      "Pipeline",
-      "Storage"
-    ],
-    "models": [
-      "Development",
-      "Testing",
-      "Deployment",
-      "Monitoring",
-      "MLOps"
-    ],
-    "implementation": [
-      "Pilots",
-      "Scale",
-      "ROI",
-      "Change Mgmt",
-      "Success Stories"
-    ],
-    "rnd": [
-      "Patents",
-      "POCs",
-      "Experiments",
-      "Partnerships",
-      "Publications"
-    ]
+    "strategy": ["AI Vision", "Roadmap", "Budget", "KPIs", "Governance"],
+    "people": ["Skills", "Training", "Culture", "Adoption", "Retention"],
+    "infrastructure": ["Cloud", "Tools", "Integration", "Security", "Scalability"],
+    "data": ["Quality", "Availability", "Governance", "Pipeline", "Storage"],
+    "models": ["Development", "Testing", "Deployment", "Monitoring", "MLOps"],
+    "implementation": ["Pilots", "Scale", "ROI", "Change Mgmt", "Success Stories"],
+    "rnd": ["Patents", "POCs", "Experiments", "Partnerships", "Publications"]
   },
   "axes": [
-    {
-      "key": "strategy",
-      "label": "Стратегия и управление",
-      "weight": 0.15,
-      "position": "12:00"
-    },
-    {
-      "key": "people",
-      "label": "Люди и культура",
-      "weight": 0.15,
-      "position": "01:45"
-    },
-    {
-      "key": "infrastructure",
-      "label": "Инфраструктура",
-      "weight": 0.15,
-      "position": "03:30"
-    },
-    {
-      "key": "data",
-      "label": "Данные",
-      "weight": 0.15,
-      "position": "05:15"
-    },
-    {
-      "key": "models",
-      "label": "Модели",
-      "weight": 0.15,
-      "position": "06:45"
-    },
-    {
-      "key": "implementation",
-      "label": "Внедрение ИИ",
-      "weight": 0.2,
-      "position": "08:30"
-    },
-    {
-      "key": "rnd",
-      "label": "Исследования (R&D)",
-      "weight": 0.05,
-      "position": "10:15"
-    }
+    {"key": "strategy", "label": "Стратегия и управление", "weight": 0.15, "position": "12:00"},
+    {"key": "people", "label": "Люди и культура", "weight": 0.15, "position": "01:45"},
+    {"key": "infrastructure", "label": "Инфраструктура", "weight": 0.15, "position": "03:30"},
+    {"key": "data", "label": "Данные", "weight": 0.15, "position": "05:15"},
+    {"key": "models", "label": "Модели", "weight": 0.15, "position": "06:45"},
+    {"key": "implementation", "label": "Внедрение ИИ", "weight": 0.2, "position": "08:30"},
+    {"key": "rnd", "label": "Исследования (R&D)", "weight": 0.05, "position": "10:15"}
   ],
   "maturity_zones": [
-    {
-      "min": 1.0,
-      "max": 1.8,
-      "level": "Начальный",
-      "color": "#FEE2E2",
-      "colorDark": "#7F1D1D"
-    },
-    {
-      "min": 1.9,
-      "max": 2.6,
-      "level": "AI-Enabled",
-      "color": "#FEF3C7",
-      "colorDark": "#78350F"
-    },
-    {
-      "min": 2.7,
-      "max": 3.4,
-      "level": "AI-Driven",
-      "color": "#DCFCE7",
-      "colorDark": "#14532D"
-    },
-    {
-      "min": 3.5,
-      "max": 4.2,
-      "level": "AI-First",
-      "color": "#DBEAFE",
-      "colorDark": "#1E3A8A"
-    },
-    {
-      "min": 4.3,
-      "max": 5.0,
-      "level": "AI-Native",
-      "color": "#EDE9FE",
-      "colorDark": "#4C1D95"
-    }
+    {"min": 1.0, "max": 1.8, "level": "Начальный", "color": "#FEE2E2", "colorDark": "#7F1D1D"},
+    {"min": 1.9, "max": 2.6, "level": "AI-Enabled", "color": "#FEF3C7", "colorDark": "#78350F"},
+    {"min": 2.7, "max": 3.4, "level": "AI-Driven", "color": "#DCFCE7", "colorDark": "#14532D"},
+    {"min": 3.5, "max": 4.2, "level": "AI-First", "color": "#DBEAFE", "colorDark": "#1E3A8A"},
+    {"min": 4.3, "max": 5.0, "level": "AI-Native", "color": "#EDE9FE", "colorDark": "#4C1D95"}
   ]
 }
