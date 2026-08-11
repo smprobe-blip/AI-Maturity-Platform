@@ -14,6 +14,7 @@ from app.models.schemas import (
     GapAnalysis,
     DimensionGap,
 )
+from app.services.benchmark_service import benchmark_service
 from app.services.pattern_service import (
     detect_pattern,
     generate_upsell_triggers,
@@ -102,49 +103,17 @@ def _find_benchmarks_file() -> Optional[Path]:
 
 
 def load_benchmark(industry: str) -> Optional[Dict[str, float]]:
-    """Load industry benchmark from benchmarks.json."""
+    """Load industry benchmark via benchmark_service (DuckDB + JSON fallback)."""
     if not industry:
         return None
     
-    file_path = _find_benchmarks_file()
-    if not file_path:
-        print(f'[benchmark] File not found, skipping for {industry}')
-        return None
-    
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        benchmarks = data.get('benchmarks', {})
-        
-        if industry in benchmarks:
-            raw = benchmarks[industry]
-        else:
-            mapped_key = INDUSTRY_KEY_MAP.get(industry.lower(), 'CrossIndustry')
-            raw = benchmarks.get(mapped_key, {})
-            if not raw:
-                for key in benchmarks:
-                    if key.lower() == industry.lower():
-                        raw = benchmarks[key]
-                        break
-        
-        if not raw:
-            print(f'[benchmark] No data for industry={industry}')
-            return None
-        
-        result = {}
-        for eng_key, score in raw.items():
-            dim_id = BENCHMARK_KEY_TO_DIM_ID.get(eng_key.lower().strip())
-            if dim_id:
-                result[dim_id] = float(score)
-        
-        print(f'[benchmark] Loaded {len(result)} axes for {industry}')
-        return result
-        
+        bench, source = benchmark_service.get_benchmark(industry)
+        print(f'[benchmark] Loaded {len(bench)} axes for {industry} (source: {source})')
+        return bench if bench else None
     except Exception as e:
         print(f'[benchmark] Error loading for {industry}: {e}')
         return None
-
 
 # ============================================================
 # Core calculations
@@ -303,7 +272,7 @@ def calculate_indices(
     roi = estimate_roi(composite)
     tco = estimate_tco(composite, company_size)
     
-    # Load benchmark if not provided
+    # Load benchmark via benchmark_service (DuckDB + JSON fallback)
     if benchmark_scores is None and company_industry:
         benchmark_scores = load_benchmark(company_industry)
     

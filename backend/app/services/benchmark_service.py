@@ -1,193 +1,138 @@
-"""Benchmark service — calculate and manage industry benchmarks."""
-
-import uuid
-from datetime import datetime
-from typing import Any, Dict, List, Optional
-
+"""
+Dynamic Benchmark Service using DuckDB.
+Calculates industry benchmarks from raw JSON audits.
+Falls back to static benchmarks.json if sample size < MIN_SAMPLE_SIZE.
+"""
+import json
+import statistics
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 import duckdb
-import numpy as np
-import pandas as pd
-import structlog
 
-from app.core.config import settings
-from app.storage.json_storage import JSONStorage
-from app.storage.parquet_storage import ParquetStorage
+MIN_SAMPLE_SIZE = 30
+DIMENSION_IDS = ['1', '2', '3', '4', '5', '6', '7']
 
-logger = structlog.get_logger()
+# Маппинг для статического файла (fallback)
+BENCHMARK_KEY_TO_DIM_ID = {
+    'strategy': '1', 'people': '2', 'infrastructure': '3',
+    'data': '4', 'models': '5', 'implementation': '6', 'rnd': '7',
+}
+INDUSTRY_KEY_MAP = {
+    'retail': 'Retail', 'ecommerce': 'Retail', 'finance': 'Finance',
+    'fintech': 'Finance', 'manufacturing': 'Manufacturing', 'it': 'IT',
+    'telecom': 'Services', 'logistics': 'Services', 'energy': 'Services',
+    'healthcare': 'Healthcare', 'education': 'Services',
+    'government': 'Services', 'other': 'CrossIndustry',
+}
 
 
 class BenchmarkService:
-    """Service for calculating and retrieving industry benchmarks."""
-
     def __init__(self):
-        self.json_storage = JSONStorage()
-        self.parquet_storage = ParquetStorage()
+        self._cache: Dict[str, Dict[str, float]] = {}
+        self._counts: Dict[str, int] = {}
+        
+        # Путь внутри Docker-контейнера
+        self.raw_audits_path = Path("/data_storage/raw_audits")
+        # Fallback для локального запуска вне Docker
+        if not self.raw_audits_path.exists():
+            self.raw_audits_path = Path(__file__).parent.parent.parent / "data_storage" / "raw_audits"
+            
+        self._benchmarks_file = self._find_benchmarks_file()
 
-    def recalculate_all(self) -> Dict[str, Any]:
-        """Recalculate all industry benchmarks."""
-        logger.info("benchmark_recalculation_started")
+    def _find_benchmarks_file(self) -> Optional[Path]:
+        current = Path(__file__).resolve().parent
+        candidates = [
+            current.parent.parent.parent / 'frontend' / 'data' / 'benchmarks.json',
+            current.parent.parent / 'frontend' / 'data' / 'benchmarks.json',
+            current.parent.parent / 'data' / 'benchmarks.json',
+        ]
+        for p in candidates:
+            if p.exists():
+                return p
+        return None
 
-        # Load all audits
-        audits = self.json_storage.list_audits(limit=100000)
+    def clear_cache(self):
+        self._cache.clear()
+        self._counts.clear()
 
-        if not audits:
-            logger.warning("no_audits_for_benchmark")
-            return {"status": "empty", "benchmarks": {}}
+    def get_benchmark(self, industry: str) -> Tuple[Dict[str, float], str]:
+        """
+        Возвращает (бенчмарк, источник).
+        Источник: 'duckdb_dynamic' или 'json_static_fallback'.
+        """
+        if not industry:
+            return self._load_static_fallback('CrossIndustry'), 'json_static_fallback'
 
-        # Convert to DataFrame
-        rows = []
-        for audit in audits:
-            if audit.get("status") == "archived":
-                continue
+        industry_lower = industry.lower()
+        
+        if industry_lower in self._cache:
+            return self._cache[industry_lower], 'cache'
 
-            indices = audit.get("calculated_indices", {})
-            profile = audit.get("company_profile", {})
+        scores_by_dim: Dict[str, List[float]] = {dim: [] for dim in DIMENSION_IDS}
+        count = 0
 
-            row = {
-                "audit_id": audit.get("audit_id"),
-                "industry": profile.get("industry", "Unknown"),
-                "company_size": profile.get("company_size", "Unknown"),
-                "region": profile.get("region", "Unknown"),
-                "composite_score": indices.get("composite_score", 0),
-                "maturity_level": indices.get("maturity_level", ""),
-            }
+        # Сканируем JSON-аудиты
+        if self.raw_audits_path.exists():
+            for json_file in self.raw_audits_path.rglob("audit_*.json"):
+                try:
+                    with open(json_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                    
+                    req_industry = data.get('request', {}).get('company_industry', '').lower()
+                    if req_industry == industry_lower:
+                        dim_scores = data.get('calculated_indices', {}).get('dimension_scores', {})
+                        for dim_id in DIMENSION_IDS:
+                            if dim_id in dim_scores:
+                                scores_by_dim[dim_id].append(float(dim_scores[dim_id]))
+                        count += 1
+                except Exception as e:
+                    print(f"[benchmark_service] Error reading {json_file}: {e}")
 
-            # Add dimension scores
-            for dim_id, score in indices.get("dimension_scores", {}).items():
-                row[f"dim_{dim_id}_score"] = score
+        self._counts[industry_lower] = count
 
-            rows.append(row)
+        if count >= MIN_SAMPLE_SIZE:
+            # Рассчитываем медиану через DuckDB (или statistics)
+            dynamic_bench = {}
+            for dim_id, scores in scores_by_dim.items():
+                # DuckDB отлично считает медиану, но для 7 чисел проще использовать statistics
+                dynamic_bench[dim_id] = round(statistics.median(scores), 2)
+            
+            self._cache[industry_lower] = dynamic_bench
+            return dynamic_bench, 'duckdb_dynamic'
+        else:
+            # Fallback на статический JSON
+            fallback = self._load_static_fallback(industry)
+            self._cache[industry_lower] = fallback
+            return fallback, 'json_static_fallback'
 
-        if not rows:
-            return {"status": "empty", "benchmarks": {}}
+    def _load_static_fallback(self, industry: str) -> Dict[str, float]:
+        if not self._benchmarks_file:
+            return {dim: 2.5 for dim in DIMENSION_IDS} # Hardcoded default
 
-        df = pd.DataFrame(rows)
-
-        # Calculate benchmarks by industry
-        benchmarks = {}
-        for industry, group in df.groupby("industry"):
-            benchmark = self._calculate_benchmark(group, industry)
-            benchmarks[industry] = benchmark
-
-            # Save to Parquet
-            self.parquet_storage.save_benchmark(
-                pd.DataFrame([benchmark]), industry=industry
-            )
-
-        # Save overall benchmark
-        overall = self._calculate_benchmark(df, "all")
-        benchmarks["all"] = overall
-
-        # Save master dataset
-        self.parquet_storage.save_dataframe(df, "master_dataset.parquet")
-
-        logger.info(
-            "benchmark_recalculation_completed",
-            industries=len(benchmarks),
-            total_audits=len(df),
-        )
-
-        return {
-            "status": "completed",
-            "total_audits": len(df),
-            "industries": list(benchmarks.keys()),
-            "benchmarks": benchmarks,
-        }
-
-    def _calculate_benchmark(self, df: pd.DataFrame, industry: str) -> Dict[str, Any]:
-        """Calculate benchmark statistics for a group."""
-        scores = df["composite_score"]
-
-        benchmark = {
-            "industry": industry,
-            "sample_size": len(df),
-            "mean_score": round(float(scores.mean()), 2),
-            "median_score": round(float(scores.median()), 2),
-            "std_dev": round(float(scores.std()), 2) if len(scores) > 1 else 0.0,
-            "min_score": round(float(scores.min()), 2),
-            "max_score": round(float(scores.max()), 2),
-            "percentile_25": round(float(scores.quantile(0.25)), 2),
-            "percentile_75": round(float(scores.quantile(0.75)), 2),
-            "percentile_90": round(float(scores.quantile(0.90)), 2),
-            "calculated_at": datetime.now().isoformat(),
-        }
-
-        # Dimension breakdowns
-        dimension_breakdown = {}
-        for col in df.columns:
-            if col.startswith("dim_") and col.endswith("_score"):
-                dim_id = col.replace("dim_", "").replace("_score", "")
-                dim_scores = df[col].dropna()
-                if len(dim_scores) > 0:
-                    dimension_breakdown[dim_id] = {
-                        "mean": round(float(dim_scores.mean()), 2),
-                        "median": round(float(dim_scores.median()), 2),
-                        "std_dev": (
-                            round(float(dim_scores.std()), 2)
-                            if len(dim_scores) > 1
-                            else 0.0
-                        ),
-                    }
-
-        benchmark["dimension_breakdown"] = dimension_breakdown
-
-        return benchmark
-
-    def get_benchmark(self, industry: str) -> Optional[Dict[str, Any]]:
-        """Get benchmark for specific industry."""
         try:
-            df = self.parquet_storage.load_dataframe(
-                f"benchmarks_{industry.lower().replace(' ', '_')}.parquet"
-            )
-            if df.empty:
-                return None
-            return df.iloc[0].to_dict()
-        except Exception:
-            return None
+            with open(self._benchmarks_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            benchmarks = data.get('benchmarks', {})
+            raw = benchmarks.get(industry, {})
+            
+            if not raw:
+                mapped = INDUSTRY_KEY_MAP.get(industry.lower(), 'CrossIndustry')
+                raw = benchmarks.get(mapped, benchmarks.get('CrossIndustry', {}))
 
-    def get_all_benchmarks(self) -> List[Dict[str, Any]]:
-        """Get all industry benchmarks."""
-        benchmarks = []
-        try:
-            master = self.parquet_storage.load_master_dataset()
-            if master.empty:
-                return []
-
-            for industry, group in master.groupby("industry"):
-                benchmarks.append(self._calculate_benchmark(group, str(industry)))
-
+            result = {}
+            for eng_key, score in raw.items():
+                dim_id = BENCHMARK_KEY_TO_DIM_ID.get(eng_key.strip().lower())
+                if dim_id:
+                    result[dim_id] = float(score)
+            return result
         except Exception as e:
-            logger.error("get_all_benchmarks_error", error=str(e))
+            print(f"[benchmark_service] Static fallback error: {e}")
+            return {dim: 2.5 for dim in DIMENSION_IDS}
 
-        return benchmarks
+    def get_stats(self) -> Dict[str, int]:
+        return self._counts.copy()
 
-    def get_company_percentile(
-        self, composite_score: float, industry: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """Calculate where a company stands in the distribution."""
-        try:
-            master = self.parquet_storage.load_master_dataset()
-            if master.empty:
-                return {"percentile": 50, "sample_size": 0}
 
-            if industry:
-                subset = master[master["industry"] == industry]
-            else:
-                subset = master
-
-            if len(subset) == 0:
-                return {"percentile": 50, "sample_size": 0}
-
-            scores = subset["composite_score"]
-            percentile = float((scores <= composite_score).sum() / len(scores) * 100)
-
-            return {
-                "percentile": round(percentile, 1),
-                "sample_size": len(subset),
-                "industry": industry or "all",
-                "mean": round(float(scores.mean()), 2),
-            }
-
-        except Exception as e:
-            logger.error("percentile_calculation_error", error=str(e))
-            return {"percentile": 50, "sample_size": 0, "error": str(e)}
+# Глобальный инстанс
+benchmark_service = BenchmarkService()

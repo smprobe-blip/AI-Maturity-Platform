@@ -10,6 +10,7 @@ from app.models.schemas import (
 )
 from app.services.audit_service import AuditService
 from app.services.radar_service import load_benchmark
+from app.services.benchmark_service import benchmark_service
 import structlog
 
 logger = structlog.get_logger()
@@ -121,3 +122,25 @@ async def get_benchmark(industry: str) -> dict:
         "dimension_scores": benchmark,
         "source": "benchmarks.json",
     }
+
+@router.get(
+    "/admin/benchmarks/stats",
+    summary="Get benchmark sample sizes",
+)
+async def get_benchmark_stats() -> dict:
+    """Return number of audits per industry used for dynamic benchmarks."""
+    return {
+        "counts": benchmark_service.get_stats(),
+        "min_sample_size": 30,
+        "status": "ok"
+    }
+
+
+@router.post(
+    "/admin/benchmarks/recalculate",
+    summary="Clear benchmark cache",
+)
+async def recalculate_benchmarks() -> dict:
+    """Force cache clear. Next request will recalculate from JSON audits."""
+    benchmark_service.clear_cache()
+    return {"status": "cache_cleared", "message": "Benchmarks will be recalculated on next request"}

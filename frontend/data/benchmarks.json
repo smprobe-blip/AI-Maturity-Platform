@@ -1,68 +1,12 @@
 {
   "benchmarks": {
-    "Retail": {
-      "strategy": 3.0,
-      "people": 2.4,
-      "infrastructure": 2.8,
-      "data": 2.6,
-      "models": 2.2,
-      "implementation": 2.5,
-      "rnd": 1.4
-    },
-    "Finance": {
-      "strategy": 3.5,
-      "people": 3.0,
-      "infrastructure": 3.8,
-      "data": 4.0,
-      "models": 3.5,
-      "implementation": 3.2,
-      "rnd": 2.0
-    },
-    "Manufacturing": {
-      "strategy": 2.8,
-      "people": 2.2,
-      "infrastructure": 3.0,
-      "data": 2.4,
-      "models": 2.0,
-      "implementation": 2.6,
-      "rnd": 1.8
-    },
-    "IT": {
-      "strategy": 3.8,
-      "people": 3.5,
-      "infrastructure": 4.2,
-      "data": 4.0,
-      "models": 3.8,
-      "implementation": 3.5,
-      "rnd": 3.0
-    },
-    "Services": {
-      "strategy": 2.6,
-      "people": 2.8,
-      "infrastructure": 2.4,
-      "data": 2.2,
-      "models": 1.8,
-      "implementation": 2.4,
-      "rnd": 1.2
-    },
-    "Healthcare": {
-      "strategy": 3.0,
-      "people": 2.6,
-      "infrastructure": 3.2,
-      "data": 3.4,
-      "models": 2.8,
-      "implementation": 2.6,
-      "rnd": 2.2
-    },
-    "CrossIndustry": {
-      "strategy": 2.5,
-      "people": 2.5,
-      "infrastructure": 2.5,
-      "data": 2.5,
-      "models": 2.5,
-      "implementation": 2.5,
-      "rnd": 2.5
-    }
+    "Retail": {"strategy": 3.0, "people": 2.4, "infrastructure": 2.8, "data": 2.6, "models": 2.2, "implementation": 2.5, "rnd": 1.4},
+    "Finance": {"strategy": 3.5, "people": 3.0, "infrastructure": 3.8, "data": 4.0, "models": 3.5, "implementation": 3.2, "rnd": 2.0},
+    "Manufacturing": {"strategy": 2.8, "people": 2.2, "infrastructure": 3.0, "data": 2.4, "models": 2.0, "implementation": 2.6, "rnd": 1.8},
+    "IT": {"strategy": 3.8, "people": 3.5, "infrastructure": 4.2, "data": 4.0, "models": 3.8, "implementation": 3.5, "rnd": 3.0},
+    "Services": {"strategy": 2.6, "people": 2.8, "infrastructure": 2.4, "data": 2.2, "models": 1.8, "implementation": 2.4, "rnd": 1.2},
+    "Healthcare": {"strategy": 3.0, "people": 2.6, "infrastructure": 3.2, "data": 3.4, "models": 2.8, "implementation": 2.6, "rnd": 2.2},
+    "CrossIndustry": {"strategy": 2.5, "people": 2.5, "infrastructure": 2.5, "data": 2.5, "models": 2.5, "implementation": 2.5, "rnd": 2.5}
   },
   "subcriteria": {
     "strategy": ["AI Vision", "Roadmap", "Budget", "KPIs", "Governance"],
