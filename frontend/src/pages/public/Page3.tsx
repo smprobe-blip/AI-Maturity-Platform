@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { RadarChart } from '@/components/charts/RadarChart';
 import { Speedometer } from '@/components/charts/Speedometer';
+import { UpsellFunnel } from '@/components/UpsellFunnel';
 import { useAuditStore } from '@/store/auditStore';
 import { publicApi } from '@/services/api';
 import { REPORT_TYPES } from '@/types';
@@ -124,6 +125,7 @@ export default function Page3() {
   const top3Bottlenecks = indices.top3_bottlenecks || [];
   const top3Anchors = indices.top3_anchors || [];
   const upsellTriggers = auditData?.upsell_triggers || [];
+  console.log("DEBUG upsellTriggers:", upsellTriggers);
 
   const patternSeverityColors: Record<string, string> = {
     critical: 'bg-red-50 border-red-300 text-red-900',
@@ -363,6 +365,12 @@ export default function Page3() {
               ))}
             </ul>
           </div>
+        )}
+
+        
+        {/* Upsell Funnel */}
+        {upsellTriggers.length > 0 && (
+          <UpsellFunnel triggers={upsellTriggers} />
         )}
 
         {/* CTA based on report type */}

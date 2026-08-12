@@ -4,6 +4,19 @@ Implements 5 patterns from Concept v5.0 Table 3.3.
 from typing import Dict, List, Optional
 from app.models.schemas import PatternInfo
 
+DIM_NAMES = {'1': 'Стратегия', '2': 'Люди', '3': 'Инфраструктура', '4': 'Данные', '5': 'Модели', '6': 'Внедрение', '7': 'R&D'}
+
+UPSELL_TEMPLATES = {
+    '1': {'service': 'Воркшоп по AI-стратегии', 'price_hint': 'от 120 000 ₽', 'duration': '1 неделя', 'deliverables': ['Roadmap на 12 мес', 'Оценка бюджета'], 'case_study': 'Retail клиент: ROI 250% за год.'},
+    '2': {'service': 'Трансформация культуры и обучение', 'price_hint': 'от 200 000 ₽', 'duration': '1 месяц', 'deliverables': ['План обучения', 'Система мотивации'], 'case_study': 'Finance клиент: +300% AI-инициатив.'},
+    '3': {'service': 'Аудит инфраструктуры и AI Governance', 'price_hint': 'от 150 000 ₽', 'duration': '2 недели', 'deliverables': ['Отчет готовности', 'Оценка TCO'], 'case_study': 'Manufacturing: -30% облачных расходов.'},
+    '4': {'service': 'Экспресс-аудит данных (Data Quality)', 'price_hint': 'от 180 000 ₽', 'duration': '3 недели', 'deliverables': ['Data Quality отчет', 'Архитектура Data Lake'], 'case_study': 'Healthcare: ускорение обучения моделей в 2 раза.'},
+    '5': {'service': 'MLOps и промышленная эксплуатация', 'price_hint': 'от 250 000 ₽', 'duration': '1 месяц', 'deliverables': ['CI/CD для ML', 'Мониторинг дрейфа'], 'case_study': 'IT клиент: релиз моделей с 3 мес до 2 недель.'},
+    '6': {'service': 'Запуск AI-пилотов (Quick Wins)', 'price_hint': 'от 300 000 ₽', 'duration': '1.5 месяца', 'deliverables': ['2-3 прототипа', 'Оценка бизнес-эффекта'], 'case_study': 'Services: экономия 2000 часов/год.'},
+    '7': {'service': 'R&D лаборатория и партнерства', 'price_hint': 'от 150 000 ₽', 'duration': '1 месяц', 'deliverables': ['Карта партнеров', 'Бюджет R&D'], 'case_study': 'Telecom: грант на совместную разработку.'}
+}
+
+
 
 DIMENSIONS = {
     '1': {'name': 'Стратегия и управление', 'weight': 0.15, 'group': 'governance'},
@@ -152,51 +165,29 @@ def generate_upsell_triggers(
     dimension_scores: Dict[str, float],
     pattern: PatternInfo,
 ) -> List[Dict]:
-    """Generate upsell triggers based on dimension scores and pattern."""
+    """Generate upsell triggers based on dimension scores using templates."""
     triggers = []
-
-    if dimension_scores.get('3', 5.0) < 2.5:
-        triggers.append({
-            'type': 'fear_of_loss',
-            'dimension_id': '3',
-            'dimension_name': 'Инфраструктура (вкл. AI Governance)',
-            'score': dimension_scores.get('3', 0),
-            'risk': 'При масштабировании создаёт риск утечки данных и штрафов',
-            'service': 'Аудит AI Governance и внедрение политик безопасности',
-            'price_hint': '600 000 ₽',
-        })
-
-    if dimension_scores.get('4', 5.0) < 2.5:
-        triggers.append({
-            'type': 'bottleneck',
-            'dimension_id': '4',
-            'dimension_name': 'Данные',
-            'score': dimension_scores.get('4', 0),
-            'risk': 'Блокирует любые инвестиции в модели. Невозможно масштабировать ИИ без Фабрики данных',
-            'service': 'Проектирование и развёртывание Фабрики данных (Data Lakehouse)',
-            'price_hint': 'от 1.5 млн ₽',
-        })
-
-    if dimension_scores.get('2', 5.0) < 2.5:
-        triggers.append({
-            'type': 'new_roles',
-            'dimension_id': '2',
-            'dimension_name': 'Люди и культура',
-            'score': dimension_scores.get('2', 0),
-            'risk': 'Нет выделенных операторов ИИ-систем и AI Automation Engineer. Пилоты заглохнут',
-            'service': 'Аутстафф ИИ-команды или Корпоративная ИИ-Академия',
-            'price_hint': 'от 800 000 ₽',
-        })
-
-    if dimension_scores.get('6', 5.0) < 2.5:
-        triggers.append({
-            'type': 'methodology',
-            'dimension_id': '6',
-            'dimension_name': 'Внедрение ИИ',
-            'score': dimension_scores.get('6', 0),
-            'risk': 'Отсутствие единого фреймворка приведёт к "пилотному болоту"',
-            'service': 'Внедрение фреймворка AgentOps (сквозной контур создания и мониторинга ИИ-агентов)',
-            'price_hint': 'от 2.0 млн ₽',
-        })
-
+    
+    # Сортируем оси по оценке (от худшей к лучшей)
+    sorted_dims = sorted(dimension_scores.items(), key=lambda x: x[1])
+    
+    # Берем только те, где оценка < 3.5 (зоны роста)
+    for dim_id, score in sorted_dims:
+        if score < 3.5 and dim_id in UPSELL_TEMPLATES:
+            template = UPSELL_TEMPLATES[dim_id]
+            triggers.append({
+                'type': 'critical_bottleneck' if score < 2.5 else 'growth_zone',
+                'dimension_id': dim_id,
+                'dimension_name': DIM_NAMES.get(dim_id, f'Ось {dim_id}'),
+                'score': score,
+                'risk': f"Оценка {score:.1f}/5.0. {template['case_study']}",
+                'service': template['service'],
+                'price_hint': template['price_hint'],
+                'duration': template['duration'],
+                'deliverables': template['deliverables'],
+                'case_study': template['case_study']
+            })
+            if len(triggers) >= 3: # Ограничиваем топ-3 триггерами
+                break
+                
     return triggers

@@ -51,19 +51,15 @@ class AnchorItem(BaseModel):
 # ============================================================
 
 class UpsellTrigger(BaseModel):
-    """Monetization trigger based on weak dimensions."""
-    type: Literal['fear_of_loss', 'bottleneck', 'new_roles', 'methodology']
-    dimension_id: str
-    dimension_name: str
-    score: float
-    risk: str
     service: str
     price_hint: str
+    risk: str
+    dimension_name: str
+    score: float
+    duration: str = "2-3 недели"
+    deliverables: List[str] = ["Диагностический отчет", "Roadmap внедрения", "Презентация для стейкхолдеров"]
+    case_study: str = "Кейс: повышение оценки зрелости с 2.0 до 4.0 за 3 месяца у клиента из той же отрасли."
 
-
-# ============================================================
-# Gap analysis models
-# ============================================================
 
 class DimensionGap(BaseModel):
     """Gap for single dimension."""
