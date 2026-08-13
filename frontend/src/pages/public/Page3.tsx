@@ -390,6 +390,14 @@ export default function Page3() {
 
         {/* Action buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <a 
+            href={`/api/v1/public/audits/${auditId}/pdf`} 
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-red-600 hover:bg-red-700 shadow-sm transition-colors"
+          >
+            📄 Скачать PDF-отчёт
+          </a>
           <Button onClick={handleRestart} variant="secondary">
             🔄 Начать заново
           </Button>

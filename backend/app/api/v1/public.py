@@ -2,6 +2,7 @@
 Priority 1 + 2.1: 35 questions, benchmark loading, upsell.
 """
 from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import JSONResponse, Response
 from app.models.schemas import (
     AuditResponse,
     BenchmarkResponse,
@@ -9,6 +10,7 @@ from app.models.schemas import (
     ExpressAuditRequest,
 )
 from app.services.audit_service import AuditService
+from app.services.pdf_service import generate_pdf_report
 from app.services.radar_service import load_benchmark
 from app.services.benchmark_service import benchmark_service
 import structlog
@@ -144,3 +146,38 @@ async def recalculate_benchmarks() -> dict:
     """Force cache clear. Next request will recalculate from JSON audits."""
     benchmark_service.clear_cache()
     return {"status": "cache_cleared", "message": "Benchmarks will be recalculated on next request"}
+
+
+@router.get(
+    "/audits/{audit_id}/pdf",
+    summary="Download audit report as PDF",
+)
+async def download_audit_pdf(audit_id: str) -> Response:
+    """Generate and return PDF report for the audit."""
+    try:
+        # Load audit data from storage
+        audit_response = await get_audit(audit_id)
+        # Преобразуем Pydantic модель в словарь для PDF-генератора
+        audit_data = audit_response.model_dump() if hasattr(audit_response, 'model_dump') else audit_response.dict()
+        
+        if not audit_data:
+            return JSONResponse(
+                status_code=404,
+                content={"error": "Audit not found"}
+            )
+        
+        # Generate PDF
+        pdf_bytes = generate_pdf_report(audit_data)
+        
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=audit_{audit_id}.pdf"
+            }
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to generate PDF: {str(e)}"}
+        )

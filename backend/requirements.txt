@@ -27,3 +27,4 @@ python-jose[cryptography]==3.3.0
 fpdf2==2.7.9
 
 
+weasyprint>=60.0
