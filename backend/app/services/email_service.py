@@ -1,129 +1,124 @@
-"""Email Service for sending notifications."""
-
+"""
+Email Service: отправка PDF-отчётов через SMTP (MailHog в dev).
+"""
+import glob
+import json
+import os
 import smtplib
-from email.mime.text import MIMEText
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
-from typing import List, Optional
-import structlog
+from email.mime.text import MIMEText
 
-from app.core.config import settings
-
-logger = structlog.get_logger()
+from app.services.pdf_service import generate_pdf_report
 
 
 class EmailService:
-    """Service for sending emails via SMTP."""
-    
     def __init__(self):
-        self.smtp_host = settings.smtp_host
-        self.smtp_port = settings.smtp_port
-        self.smtp_user = settings.smtp_user
-        self.smtp_password = settings.smtp_password
-        self.from_email = settings.smtp_from_email
-        self.use_tls = settings.smtp_use_tls
-    
-    def send_email(
-        self,
-        to_emails: List[str],
-        subject: str,
-        html_body: str,
-        text_body: Optional[str] = None
-    ) -> bool:
-        """Send email via SMTP."""
+        self.smtp_host = os.getenv("SMTP_HOST", "mailhog")
+        self.smtp_port = int(os.getenv("SMTP_PORT", "1025"))
+        self.smtp_user = os.getenv("SMTP_USER", "")
+        self.smtp_password = os.getenv("SMTP_PASSWORD", "")
+        self.use_tls = os.getenv("SMTP_USE_TLS", "false").lower() == "true"
+        self.from_email = os.getenv("FROM_EMAIL", "reports@ai-maturity.platform")
+        self.from_name = os.getenv("FROM_NAME", "AI Maturity Platform")
+        self.raw_path = os.getenv("RAW_AUDITS_PATH", "/data_storage/raw_audits")
+
+    def _load_audit(self, audit_id):
+        patterns = [
+            os.path.join(self.raw_path, "**", "audit_%s.json" % audit_id),
+            os.path.join(self.raw_path, "**", "%s.json" % audit_id),
+        ]
+        for pat in patterns:
+            files = glob.glob(pat, recursive=True)
+            if files:
+                try:
+                    with open(files[0], encoding="utf-8") as f:
+                        return json.load(f)
+                except Exception as e:
+                    print("EmailService: read error %s: %s" % (files[0], e))
+        return None
+
+    def send_report(self, to_email, audit_id, body=""):
+        audit_data = self._load_audit(audit_id) or {"audit_id": audit_id}
+
+        pdf_bytes = None
         try:
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = self.from_email
-            msg['To'] = ', '.join(to_emails)
+            pdf_bytes = generate_pdf_report(audit_data)
+            print("EmailService: PDF generated OK, %d bytes" % len(pdf_bytes or b""))
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print("EmailService: PDF generation failed: %s" % e)
+
+        indices = audit_data.get("calculated_indices", {}) or {}
+        composite = indices.get("composite_score", 0)
+        level = indices.get("maturity_level", "")
+
+        msg = MIMEMultipart()
+        msg["From"] = "%s <%s>" % (self.from_name, self.from_email)
+        msg["To"] = to_email
+        msg["Subject"] = "Ваш отчёт об оценке зрелости ИИ — %s" % level
+
+        if body and ("<html" in body.lower() or "<div" in body.lower() or "<p" in body.lower()):
+            msg.attach(MIMEText(body, "html", "utf-8"))
+        else:
+            text_body = body or (
+                "Здравствуйте!\n\n"
+                "Спасибо за прохождение аудита зрелости ИИ на AI Maturity Platform.\n\n"
+                "Ваш общий балл: %.2f / 5.00\n"
+                "Уровень зрелости: %s\n\n"
+                "Во вложении — полный PDF-отчёт:\n"
+                "- Радар зрелости по 7 осям (текущее / целевое / бенчмарк)\n"
+                "- Диагноз и ключевые рекомендации\n"
+                "- Персональные рекомендуемые услуги\n\n"
+                "С уважением,\nКоманда AI Maturity Platform" % (composite, level)
+            )
+            msg.attach(MIMEText(text_body, "plain", "utf-8"))
+
+        if pdf_bytes:
+            import tempfile
+            import os
             
-            if text_body:
-                msg.attach(MIMEText(text_body, 'plain', 'utf-8'))
-            msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+            # Сохраняем PDF во временный файл
+            pdf_filename = "audit_%s.pdf" % audit_id
+            tmp_path = os.path.join(tempfile.gettempdir(), pdf_filename)
+            with open(tmp_path, 'wb') as f:
+                f.write(pdf_bytes)
             
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+            # Читаем обратно и прикрепляем
+            with open(tmp_path, 'rb') as f:
+                att = MIMEApplication(f.read(), _subtype="pdf")
+                att.add_header(
+                    'Content-Disposition',
+                    'attachment',
+                    filename=pdf_filename
+                )
+                msg.attach(att)
+            
+            print("EmailService: PDF attached from %s, %d bytes" % (tmp_path, len(pdf_bytes)))
+            
+            # Удаляем временный файл
+            try:
+                os.remove(tmp_path)
+            except:
+                pass
+
+        try:
+            with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=15) as server:
                 if self.use_tls:
                     server.starttls()
                 if self.smtp_user and self.smtp_password:
-                    server.login(self.smtp_user, self.smtp_password)
-                server.send_message(msg)
-            
-            logger.info("email_sent", to=to_emails, subject=subject)
+                    try:
+                        server.login(self.smtp_user, self.smtp_password)
+                    except Exception:
+                        pass
+                server.sendmail(self.from_email, [to_email], msg.as_string())
+            print("EmailService: sent to %s" % to_email)
             return True
         except Exception as e:
-            logger.error("email_send_failed", error=str(e), to=to_emails)
+            print("EmailService: send failed: %s" % e)
             return False
-    
-    def send_audit_notification(self, to_emails: List[str], company_name: str, score: float):
-        """Send audit completion notification."""
-        subject = f"AI Maturity Assessment Complete: {company_name}"
-        html_body = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif;">
-            <h2 style="color: #667eea;">AI Maturity Assessment Complete</h2>
-            <p>Company: <strong>{company_name}</strong></p>
-            <p>Composite Score: <strong>{score:.1f}</strong></p>
-            <p>The full report is available in the admin panel.</p>
-            <hr>
-            <p style="color: #666; font-size: 12px;">AI Maturity Platform</p>
-        </body>
-        </html>
-        """
-        return self.send_email(to_emails, subject, html_body)
-    
-    def send_audit_report(
-        self,
-        to_email: str,
-        company_name: str,
-        score: float,
-        level: str,
-        audit_id: str
-    ) -> bool:
-        """Send audit report email."""
-        subject = f"AI Maturity Assessment Report: {company_name}"
-        html_body = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h1 style="color: #667eea;">AI Maturity Assessment Report</h1>
-                
-                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <h2 style="color: #333; margin-top: 0;">{company_name}</h2>
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tr>
-                            <td style="padding: 8px 0; color: #666;">Composite Score:</td>
-                            <td style="padding: 8px 0; font-weight: bold; color: #667eea; font-size: 18px;">{score:.1f}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px 0; color: #666;">Maturity Level:</td>
-                            <td style="padding: 8px 0; font-weight: bold;">{level}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px 0; color: #666;">Audit ID:</td>
-                            <td style="padding: 8px 0; font-family: monospace; font-size: 12px;">{audit_id}</td>
-                        </tr>
-                    </table>
-                </div>
-                
-                <p>Thank you for completing the AI Maturity Assessment!</p>
-                <p>The full detailed report is available in the admin panel.</p>
-                
-                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                <p style="color: #999; font-size: 12px;">AI Maturity Platform</p>
-            </div>
-        </body>
-        </html>
-        """
-        
-        return self.send_email([to_email], subject, html_body)
-    
-    def get_status(self) -> dict:
-        """Get email service status."""
-        return {
-            "smtp_host": self.smtp_host,
-            "smtp_port": self.smtp_port,
-            "from_email": self.from_email,
-            "configured": bool(self.smtp_host and self.smtp_port)
-        }
-
 
 email_service = EmailService()
