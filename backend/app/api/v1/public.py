@@ -4,6 +4,7 @@ Priority 1 + 2.1: 35 questions, benchmark loading, upsell.
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse, Response
 from app.models.schemas import (
+    ServiceRequestBody,
     AuditResponse,
     BenchmarkResponse,
     EmailReportRequest,
@@ -13,6 +14,7 @@ from app.services.audit_service import AuditService
 from app.services.pdf_service import generate_pdf_report
 from app.services.radar_service import load_benchmark
 from app.services.benchmark_service import benchmark_service
+from app.services.baserow_service import baserow_service
 import structlog
 
 logger = structlog.get_logger()
@@ -180,4 +182,45 @@ async def download_audit_pdf(audit_id: str) -> Response:
         return JSONResponse(
             status_code=500,
             content={"error": f"Failed to generate PDF: {str(e)}"}
+        )
+
+
+@router.post(
+    "/audits/{audit_id}/service-request",
+    summary="Submit service request from upsell funnel",
+)
+async def submit_service_request(audit_id: str, req: ServiceRequestBody) -> dict:
+    """Create lead in Baserow from upsell funnel form submission."""
+    try:
+        # Load audit data to get additional context
+        audit_response = await get_audit(audit_id)
+        audit_data = audit_response.model_dump() if hasattr(audit_response, 'model_dump') else audit_response.dict()
+        
+        indices = audit_data.get("calculated_indices", {}) or {}
+        request_data = audit_data.get("request", {}) or {}
+        
+        # Create lead in Baserow
+        success = baserow_service.create_lead(
+            contact_email=req.email,
+            contact_name=req.name,
+            audit_id=audit_id,
+            industry=request_data.get("company_industry", ""),
+            company_size=request_data.get("company_size", ""),
+            composite_score=indices.get("composite_score"),
+            maturity_level=indices.get("maturity_level", ""),
+            service_interest=req.service,
+            source="upsell_funnel",
+        )
+        
+        if success:
+            return {"status": "success", "message": "Lead created in CRM"}
+        else:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Failed to create lead in CRM"}
+            )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
         )

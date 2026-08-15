@@ -116,6 +116,21 @@ class EmailService:
                         pass
                 server.sendmail(self.from_email, [to_email], msg.as_string())
             print("EmailService: sent to %s" % to_email)
+            try:
+                from app.services.baserow_service import baserow_service
+                req_data = audit_data.get("request", {}) or {}
+                baserow_service.create_lead(
+                    contact_email=to_email,
+                    contact_name=req_data.get("contact_name", ""),
+                    audit_id=audit_id,
+                    industry=req_data.get("company_industry", ""),
+                    company_size=req_data.get("company_size", ""),
+                    composite_score=composite,
+                    maturity_level=level,
+                    source="email_request",
+                )
+            except Exception as lead_err:
+                print("EmailService: lead creation failed: %s" % lead_err)
             return True
         except Exception as e:
             print("EmailService: send failed: %s" % e)

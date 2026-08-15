@@ -140,3 +140,10 @@ class BenchmarkResponse(BaseModel):
     composite_mean: float
     composite_median: float
     percentiles: Dict[str, float]
+
+class ServiceRequestBody(BaseModel):
+    """Request body for service request from upsell funnel."""
+    name: str
+    email: EmailStr
+    phone: str = ""
+    service: str = ""

@@ -370,7 +370,7 @@ export default function Page3() {
         
         {/* Upsell Funnel */}
         {upsellTriggers.length > 0 && (
-          <UpsellFunnel triggers={upsellTriggers} />
+          <UpsellFunnel triggers={upsellTriggers} auditId={auditId} />
         )}
 
         {/* CTA based on report type */}

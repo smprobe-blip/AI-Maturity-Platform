@@ -13,9 +13,10 @@ interface UpsellTrigger {
 
 interface UpsellFunnelProps {
   triggers: UpsellTrigger[];
+  auditId: string;
 }
 
-export function UpsellFunnel({ triggers }: UpsellFunnelProps) {
+export function UpsellFunnel({ triggers, auditId }: UpsellFunnelProps) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({ name: '', email: '', phone: '' });
   const [submitted, setSubmitted] = useState(false);
@@ -32,10 +33,31 @@ export function UpsellFunnel({ triggers }: UpsellFunnelProps) {
     { id: 4, label: 'Заявка' },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Здесь будет интеграция с API отправки заявки
-    setSubmitted(true);
+    try {
+      const response = await fetch(`/api/v1/public/audits/${auditId}/service-request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          service: trigger.service,
+        }),
+      });
+      
+      if (response.ok) {
+        setSubmitted(true);
+        console.log('Lead created successfully');
+      } else {
+        console.error('Failed to create lead:', await response.text());
+        alert('Ошибка при отправке заявки. Попробуйте позже.');
+      }
+    } catch (error) {
+      console.error('Network error:', error);
+      alert('Ошибка сети. Проверьте подключение.');
+    }
   };
 
   return (

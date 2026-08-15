@@ -25,8 +25,8 @@ services:
       - KEYCLOAK_CLIENT_ID=backend-api
       - KEYCLOAK_CLIENT_SECRET=Yoq5Uwgc8L2dnyYKiZTXoQAoDzXxnehe
       - BASEROW_URL=http://baserow:80
-      - BASEROW_API_TOKEN=CE49jfknihUgaVqxJDUPqUXixc8hrsmx
-      - BASEROW_LEADS_TABLE_ID=511
+      - BASEROW_API_TOKEN=CaJAv3JmQdPTXuWLnsvssKoNrYJWcsOn
+      - BASEROW_LEADS_TABLE_ID=513
       - SMTP_HOST=mailhog
       - SMTP_PORT=1025
       - SMTP_USER=test
