@@ -2,6 +2,8 @@
 Priority 1 + 2.1: 35 questions, benchmark loading, upsell.
 """
 from fastapi import APIRouter, HTTPException, status
+import json
+import os
 from fastapi.responses import JSONResponse, Response
 from app.models.schemas import (
     ServiceRequestBody,
@@ -224,3 +226,21 @@ async def submit_service_request(audit_id: str, req: ServiceRequestBody) -> dict
             status_code=500,
             content={"error": str(e)}
         )
+
+
+@router.get(
+    "/questions/hints",
+    summary="Get tooltips for all audit questions",
+)
+async def get_question_hints() -> dict:
+    """Return hints/tooltips for all 35 audit questions."""
+    hints_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+        "data",
+        "question_hints.json"
+    )
+    try:
+        with open(hints_path, encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {"error": "Hints file not found"}

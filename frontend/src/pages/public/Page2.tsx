@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
+import { QuestionHint } from '@/components/QuestionHint';
 import { useAuditStore } from '@/store/auditStore';
 import { publicApi } from '@/services/api';
 import { DIMENSIONS } from '@/types';
@@ -8,6 +9,19 @@ import { DIMENSIONS } from '@/types';
 export default function Page2() {
   const navigate = useNavigate();
   const { profile, responses, setQuestionScore, setTargetScores, setResults, targetScores } = useAuditStore();
+  const [hintsMap, setHintsMap] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    fetch('/api/v1/public/questions/hints')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('proxy'))))
+      .catch(() => fetch('http://localhost:8000/api/v1/public/questions/hints').then((r) => r.json()))
+      .then((data) => {
+        const map: Record<string, any> = {};
+        (data.blocks || []).forEach((b: any) => (b.questions || []).forEach((q: any) => (map[q.id] = q)));
+        setHintsMap(map);
+      })
+      .catch(() => {});
+  }, []);
   const [activeDimension, setActiveDimension] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -175,6 +189,7 @@ export default function Page2() {
                   <div className="space-y-5">
                     {dim.questions.map((q) => {
                       const currentValue = responses[dim.id]?.[q.id] ?? 0;
+                      const hint = hintsMap[String(q.id).includes('.') ? String(q.id) : `${dim.id}.${q.id}`];
                       const roundedValue = Math.round(currentValue);
                       const descriptor = roundedValue >= 1 && roundedValue <= 5
                         ? q.descriptors[roundedValue as 1 | 2 | 3 | 4 | 5]
@@ -184,8 +199,9 @@ export default function Page2() {
                         <div key={q.id} className="border-b border-gray-100 pb-5 last:border-0 last:pb-0">
                           <div className="flex justify-between items-start mb-3">
                             <div className="flex-1">
-                              <div className="font-semibold text-gray-900">
-                                Q{q.id}. {q.text}
+                              <div className="font-semibold text-gray-900 flex items-center gap-1.5">
+                                <span>Q{q.id}. {q.text}</span>
+                                <QuestionHint hint={hint} />
                               </div>
                             </div>
                             <div className="text-2xl font-bold text-primary-600 min-w-[3rem] text-right">
@@ -199,6 +215,7 @@ export default function Page2() {
                               return (
                                 <button
                                   key={level}
+                                  title={hint && hint.levels ? hint.levels[String(level)] || '' : ''}
                                   type="button"
                                   onClick={() => handleQuestionChange(dim.id, q.id, level)}
                                   className={'px-2.5 py-1 text-xs rounded-full transition-all ' + (
