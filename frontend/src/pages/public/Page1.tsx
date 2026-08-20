@@ -3,7 +3,7 @@
  * v1.1 — Priority 1: 3 report variants, PDN consent (152-FZ).
  */
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -35,6 +35,8 @@ const SIZES = [
 
 export default function Page1() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const source = searchParams.get('src') || 'direct';
   const { setProfile, profile } = useAuditStore();
 
   const [industry, setIndustry] = useState(profile?.industry || '');
@@ -45,12 +47,16 @@ export default function Page1() {
     profile?.reportType || 'express'
   );
   const [pdnConsent, setPdnConsent] = useState(false);
+  const [respondentRole, setRespondentRole] = useState(profile?.respondentRole || '');
+  const [companyName, setCompanyName] = useState(profile?.companyName || '');
+  const [researchConsent, setResearchConsent] = useState(profile?.researchConsent || false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
     if (!industry) e.industry = 'Выберите отрасль';
     if (!size) e.size = 'Выберите размер компании';
+    if (!respondentRole) e.respondentRole = 'Выберите должность';
     if (!email) e.email = 'Введите email';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = 'Некорректный email';
     if (!pdnConsent) {
@@ -63,7 +69,7 @@ export default function Page1() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-    setProfile({ industry, size, email, name, reportType });
+    setProfile({ industry, size, email, name, reportType, respondentRole, companyName, researchConsent, source });
     navigate('/assessment');
   };
 
@@ -118,6 +124,53 @@ export default function Page1() {
               onChange={(e) => setName(e.target.value)}
               placeholder="Иван Петров"
             />
+          </div>
+
+          {/* Research fields — для валидации методики магистратуры */}
+          <div className="space-y-4">
+            <Select
+              label="Ваша должность"
+              value={respondentRole}
+              onChange={(e) => setRespondentRole(e.target.value)}
+              options={[
+                { value: '', label: 'Выберите...' },
+                { value: 'CEO', label: 'CEO / Генеральный директор' },
+                { value: 'CTO', label: 'CTO / Технический директор' },
+                { value: 'CIO', label: 'CIO / ИТ-директор' },
+                { value: 'IT_manager', label: 'Руководитель ИТ-подразделения' },
+                { value: 'Data_lead', label: 'Руководитель Data/Analytics' },
+                { value: 'Specialist', label: 'Специалист (аналитик, разработчик, ML-инженер)' },
+                { value: 'Other', label: 'Другое' },
+              ]}
+              error={errors.respondentRole}
+            />
+
+            <Input
+              label="Название компании (опционально)"
+              type="text"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              placeholder="ООО 'Пример'"
+            />
+
+            <label className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
+              <input
+                type="checkbox"
+                checked={researchConsent}
+                onChange={(e) => setResearchConsent(e.target.checked)}
+                className="h-4 w-4 text-blue-600 rounded mt-0.5"
+              />
+              <div className="text-sm">
+                <div className="font-medium text-blue-900">
+                  🎓 Согласие на участие в научном исследовании
+                </div>
+                <div className="text-blue-800 mt-1">
+                  Ваши <strong>обезличенные</strong> ответы будут использованы в магистерской диссертации
+                  РАНХиГС для статистической валидации методики оценки ИИ-зрелости.
+                  Данные используются только в агрегированном виде.
+                </div>
+              </div>
+            </label>
           </div>
 
           {/* Report type selection */}

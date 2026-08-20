@@ -77,6 +77,11 @@ export default function Page2() {
         responses,
         target_scores: showTarget ? localTargets : undefined,
         pdn_consent: true,
+        // Исследовательские поля (магистратура)
+        respondent_role: profile.respondentRole,
+        company_name: profile.companyName,
+        research_consent: profile.researchConsent,
+        source: profile.source,
       });
       setResults(result.audit_id, result.calculated_indices);
       navigate('/results/' + result.audit_id);

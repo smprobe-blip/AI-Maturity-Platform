@@ -12,6 +12,11 @@ export interface AuditProfile {
   email: string;
   name?: string;
   reportType: 'express' | 'executive' | 'comprehensive';
+  // Исследовательские поля (магистратура)
+  respondentRole?: string;
+  companyName?: string;
+  researchConsent?: boolean;
+  source?: string;
 }
 
 /**

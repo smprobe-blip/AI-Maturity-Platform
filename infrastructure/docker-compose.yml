@@ -38,7 +38,7 @@ services:
       - EXPORTS_PATH=/data_storage/exports
       - LOGS_PATH=/data_storage/logs
     volumes:
-      - ../data_storage:/data_storage
+      - ./backend/data_storage:/data_storage
       - ../backend/app:/app/app
       - ../frontend/data:/app/frontend/data:ro
     depends_on:

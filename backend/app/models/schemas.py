@@ -114,6 +114,23 @@ class ExpressAuditRequest(BaseModel):
         description="Target scores for gap analysis: {'1': 4.5, '2': 4.0, ...}"
     )
     pdn_consent: bool = Field(..., description="152-FZ personal data consent")
+    # Исследовательский модуль (магистратура)
+    respondent_role: Optional[str] = Field(
+        default=None,
+        description="Role: CEO, CTO, CIO, IT_manager, specialist, other"
+    )
+    company_name: Optional[str] = Field(
+        default=None,
+        description="Company name (optional for research)"
+    )
+    research_consent: Optional[bool] = Field(
+        default=False,
+        description="Consent to use anonymized data in academic research"
+    )
+    source: Optional[str] = Field(
+        default=None,
+        description="Traffic source: tg_own, tg_partner_N, direct, etc."
+    )
 
 
 class AuditResponse(BaseModel):

@@ -125,7 +125,6 @@ export default function Page3() {
   const top3Bottlenecks = indices.top3_bottlenecks || [];
   const top3Anchors = indices.top3_anchors || [];
   const upsellTriggers = auditData?.upsell_triggers || [];
-  console.log("DEBUG upsellTriggers:", upsellTriggers);
 
   const patternSeverityColors: Record<string, string> = {
     critical: 'bg-red-50 border-red-300 text-red-900',

@@ -30,7 +30,7 @@ export function QuestionHint({ hint }: { hint?: QuestionHintData }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40 cursor-default" onClick={() => setOpen(false)} />
-          <div className="absolute z-50 left-0 top-6 w-[26rem] max-w-[85vw] bg-white border border-blue-200 rounded-xl shadow-2xl p-4 text-left font-normal">
+          <div className="absolute z-50 top-6 sm:top-0 left-1/2 -translate-x-1/2 sm:left-full sm:translate-x-0 sm:ml-4 w-[min(39rem,92vw)] sm:w-[39rem] bg-white border border-blue-200 rounded-xl shadow-2xl p-4 text-left font-normal">
             <div className="text-sm font-bold text-gray-900 mb-2">{hint.title}</div>
 
             <div className="mb-2">

@@ -158,6 +158,11 @@ class AuditService:
                     'responses': request.responses,
                     'target_scores': request.target_scores,
                     'pdn_consent': request.pdn_consent,
+                    # Исследовательские метаданные (валидация методики)
+                    'respondent_role': request.respondent_role,
+                    'company_name': request.company_name,
+                    'research_consent': request.research_consent,
+                    'source': request.source,
                 },
             }
             

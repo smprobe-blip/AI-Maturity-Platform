@@ -100,6 +100,11 @@ export interface AuditRequest {
   responses: Record<string, Record<string, number>>;
   target_scores?: Record<string, number>;
   pdn_consent: boolean;
+  // Research fields (master's thesis)
+  respondent_role?: string;
+  company_name?: string;
+  research_consent?: boolean;
+  source?: string;
 }
 
 export interface AuditResponse {
