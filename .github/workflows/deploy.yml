@@ -18,12 +18,19 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H 72.56.14.151 >> ~/.ssh/known_hosts 2>/dev/null
       
-      - name: Verify key
+      - name: Test SSH connection
         run: |
-          echo "Отпечаток ключа на раннере:"
-          ssh-keygen -y -f ~/.ssh/deploy_key | ssh-keygen -l -f -
-          echo "Ожидаемый отпечаток: SHA256:r3Xi61hHru4JHbTwFEukF8u8UAGrvaSbF8J8Vimtr5o"
+          ssh -v -i ~/.ssh/deploy_key \
+            -o PreferredAuthentications=publickey \
+            -o PubkeyAuthentication=yes \
+            -o PasswordAuthentication=no \
+            -o StrictHostKeyChecking=no \
+            root@72.56.14.151 "echo 'SSH_OK'" 2>&1 | tail -20
       
       - name: Deploy
         run: |
-          ssh -i ~/.ssh/deploy_key root@72.56.14.151 "/opt/deploy.sh"
+          ssh -i ~/.ssh/deploy_key \
+            -o PreferredAuthentications=publickey \
+            -o PubkeyAuthentication=yes \
+            -o PasswordAuthentication=no \
+            root@72.56.14.151 "/opt/deploy.sh"
