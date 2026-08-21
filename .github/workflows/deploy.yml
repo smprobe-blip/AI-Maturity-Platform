@@ -14,7 +14,7 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          echo "${{ secrets.VPS_SSH_KEY }}" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H 72.56.14.151 >> ~/.ssh/known_hosts 2>/dev/null
       
@@ -24,4 +24,4 @@ jobs:
       
       - name: Notify on failure
         if: failure()
-        run: echo "❌ Deploy failed"
+        run: echo "Деплой завершился с ошибкой"
