@@ -18,12 +18,19 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H 72.56.14.151 >> ~/.ssh/known_hosts 2>/dev/null
       
+      - name: Verify key
+        run: |
+          echo "Размер ключа (должен быть ~400 байт):"
+          wc -c < ~/.ssh/deploy_key
+          echo "Отпечаток ключа:"
+          ssh-keygen -y -f ~/.ssh/deploy_key 2>&1 | ssh-keygen -l -f - 2>&1 || echo "ОШИБКА ДЕКОДИРОВАНИЯ"
+      
       - name: Test connection
         run: |
           ssh -i ~/.ssh/deploy_key \
             -o PreferredAuthentications=publickey \
             -o PasswordAuthentication=no \
-            deployer@72.56.14.151 "echo 'SSH_OK'"
+            deployer@72.56.14.151 "echo SSH_OK"
       
       - name: Deploy
         run: |
