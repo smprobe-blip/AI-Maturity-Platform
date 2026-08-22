@@ -78,6 +78,16 @@ export default function Page1() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 py-12 px-4">
       <div className="max-w-3xl mx-auto">
+        {/* Mini header: ссылка на основной сайт */}
+        <div className="text-center mb-4">
+          <a 
+            href="https://netbrainpower.ru" 
+            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-primary-600 font-medium transition-colors"
+          >
+            🎯 NetBrainPower
+          </a>
+        </div>
+
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-3">
