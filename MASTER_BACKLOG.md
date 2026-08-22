@@ -1,23 +1,37 @@
 # MASTER BACKLOG — AI Maturity Platform
 
-Обновлено: 2026-08-21
+Обновлено: 2026-08-22
 
-## ✅ Готово (v1.9 + инфраструктура)
+## ✅ Готово (production-ready)
 
+### Ядро продукта
 - [x] Исследовательский модуль (v1.9-research-module): должность, компания, согласие, ?src=
 - [x] CSV-экспорт item-level (35 ответов + метаданные) для R/Python
-- [x] Production deploy: Timeweb VPS, audit.netbrainpower.ru
-- [x] HTTPS: Caddy + Let's Encrypt (авто-SSL)
-- [x] Персистентный volume /data_storage (данные исследования)
-- [x] CI/CD: push → GitHub Actions → deploy через пользователя deployer
-- [x] Бэкапы перед каждым деплоем (/opt/backups/deploy/)
-- [x] SEC-1: SSH hardening (без паролей, fail2ban, современные алгоритмы)
 - [x] UI: премиум-отчёты отключены, бейдж «🔧 В разработке»
+- [x] Мини-хедер со ссылкой на netbrainpower.ru
+
+### Инфраструктура
+- [x] Production deploy: Timeweb VPS, audit.netbrainpower.ru
+- [x] **Главный лендинг**: netbrainpower.ru на том же VPS через Caddy
+- [x] HTTPS: Caddy + Let's Encrypt (авто-SSL) для обоих доменов
+- [x] Персистентный volume /data_storage (данные исследования)
+- [x] CI/CD: push → GitHub Actions → deploy через deployer
+- [x] Бэкапы перед каждым деплоем (/opt/backups/deploy/)
+- [x] Deploy с --pull=false (обход Docker Hub rate limit)
+
+### Безопасность
+- [x] SEC-1: SSH hardening (без паролей, fail2ban, современные алгоритмы)
 - [x] Процесс: локальная проверка перед push (scripts/local-check.sh)
+
+### Отслеживание источников
+- [x] ?src=site — трафик с netbrainpower.ru
+- [x] ?src=tg_own — свой Telegram-канал
+- [x] ?src=tg_partner_N — партнёрские каналы
+- [x] ?src=direct — прямой заход
 
 ## 🔥 Очередь (приоритет)
 
-- [ ] START: публикация поста в Telegram, старт сбора данных (?src=tg_own)
+- [ ] **START**: публикация поста в Telegram, старт сбора данных (?src=tg_own)
 - [ ] SEC-2: смена порта SSH 22 → нестандартный (-95% мусорных атак)
 - [ ] 6.8: админ-панель лидов (конверсия по источникам, отраслям, ролям)
 
