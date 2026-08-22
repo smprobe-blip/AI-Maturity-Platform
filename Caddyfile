@@ -1,0 +1,56 @@
+{
+    email admin@netbrainpower.ru
+}
+
+audit.netbrainpower.ru {
+    # API — напрямую на backend (путь сохраняется как есть)
+    handle /api/* {
+        reverse_proxy backend:8000
+    }
+    
+    # Всё остальное — на frontend (SPA)
+    handle {
+        reverse_proxy frontend:80
+    }
+    
+    log {
+        output file /var/log/caddy/audit.log
+        format json
+    }
+    
+    encode gzip zstd
+    
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+}
+
+netbrainpower.ru {
+    root * /opt/netbrainpower.ru
+    file_server
+    
+    log {
+        output file /var/log/caddy/netbrainpower.log
+        format json
+    }
+    
+    encode gzip zstd
+    
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+}
+
+www.netbrainpower.ru {
+    redir https://netbrainpower.ru{uri} permanent
+}
