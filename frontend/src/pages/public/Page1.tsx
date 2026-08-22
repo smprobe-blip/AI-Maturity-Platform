@@ -181,13 +181,16 @@ export default function Page1() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {REPORT_TYPES.map((rt) => {
                 const isSelected = reportType === rt.value;
+                const isDisabled = rt.value !== 'express';
                 return (
                   <label
                     key={rt.value}
-                    className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all ${
-                      isSelected
-                        ? 'border-primary-600 bg-primary-50 shadow-md scale-[1.02]'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    className={`relative rounded-lg border-2 p-4 transition-all ${
+                      isDisabled
+                        ? 'border-gray-200 bg-gray-50 opacity-70 cursor-not-allowed'
+                        : isSelected
+                          ? 'cursor-pointer border-primary-600 bg-primary-50 shadow-md scale-[1.02]'
+                          : 'cursor-pointer border-gray-200 bg-white hover:border-gray-300'
                     }`}
                   >
                     <input
@@ -195,23 +198,32 @@ export default function Page1() {
                       name="reportType"
                       value={rt.value}
                       checked={isSelected}
+                      disabled={isDisabled}
                       onChange={(e) =>
                         setReportType(e.target.value as 'express' | 'executive' | 'comprehensive')
                       }
                       className="sr-only"
                     />
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-gray-900">{rt.label}</span>
-                      {isSelected && (
+                      <span className={`font-bold ${isDisabled ? 'text-gray-400' : 'text-gray-900'}`}>
+                        {rt.label}
+                      </span>
+                      {isSelected && !isDisabled && (
                         <span className="text-primary-600 text-lg">✓</span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-600 mb-2 min-h-[2.5rem]">
+                    <p className={`text-xs mb-2 min-h-[2.5rem] ${isDisabled ? 'text-gray-400' : 'text-gray-600'}`}>
                       {rt.description}
                     </p>
-                    <div className="text-sm font-semibold text-primary-600">
-                      {rt.price}
-                    </div>
+                    {isDisabled ? (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                        🔧 В разработке
+                      </span>
+                    ) : (
+                      <div className="text-sm font-semibold text-primary-600">
+                        {rt.price}
+                      </div>
+                    )}
                   </label>
                 );
               })}
