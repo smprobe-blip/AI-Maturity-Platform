@@ -17,7 +17,9 @@ class PatternInfo(BaseModel):
         'left_skew',
         'star_with_gaps',
         'benchmark_parity',
-        'balanced'
+        'balanced',
+        'people_anchor',
+        'single_anchor',
     ]
     diagnosis: str
     recommendation: str
