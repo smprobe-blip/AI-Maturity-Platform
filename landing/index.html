@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetBrainPower — ИИ-стратегия</title>
+<meta name="description" content="От оценки ИИ-зрелости до внедрения ИИ-агентов с измеримым ROI. 35 критериев, 7 измерений, 15 минут. Методика магистратуры РАНХиГС.">
+<meta property="og:title" content="NetBrainPower — ИИ-стратегия для компаний, которые хотят результат">
+<meta property="og:description" content="Бесплатная экспресс-диагностика ИИ-зрелости: радар по 7 осям, отраслевые бенчмарки, план на 90 дней.">
+<meta property="og:image" content="https://netbrainpower.ru/radar-hero.png">
+<style>
+:root{--purple:#7c3aed;--purple-l:#8b5cf6;--ink:#0f1222;--muted:#6b7280;--bg:#eef0f9;--card:#f6f7fc}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--ink);line-height:1.5;
+background-color:var(--bg);
+background-image:radial-gradient(#d9ddef 1.2px,transparent 1.2px);background-size:30px 30px}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+header{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:26px 0;border-bottom:1px solid #e2e4f0}
+.logo{font-size:22px;font-weight:800;color:var(--purple)}.logo b{font-weight:800}.logo span{color:var(--purple-l);font-weight:500}
+nav{display:flex;gap:30px}nav a{color:#4b5563;text-decoration:none;font-size:15px;font-weight:500}nav a:hover{color:var(--purple)}
+.pill{font-size:13px;font-weight:700;color:var(--purple);background:#ece9fb;border:1px solid #d8d0f7;border-radius:999px;padding:9px 18px;white-space:nowrap}
+.hero{display:grid;grid-template-columns:1.05fr .95fr;gap:50px;align-items:center;padding:70px 0 40px}
+.eyebrow{color:var(--purple-l);font-size:13px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;margin-bottom:22px}
+h1{font-size:60px;line-height:1.05;font-weight:800;letter-spacing:-.02em;margin-bottom:26px}
+h1 .accent{color:var(--purple-l)}
+.hero p{font-size:18px;color:#4b5563;max-width:480px;margin-bottom:36px}
+.cta-row{display:flex;gap:16px;flex-wrap:wrap}
+.btn{display:inline-block;border-radius:999px;padding:18px 36px;font-size:16px;font-weight:700;text-decoration:none;transition:.25s}
+.btn-primary{background:var(--purple-l);color:#fff;box-shadow:0 12px 30px rgba(124,58,237,.35)}
+.btn-primary:hover{background:var(--purple);transform:translateY(-2px)}
+.btn-ghost{background:#fff;color:var(--ink);border:1px solid #e2e4f0}
+.btn-ghost:hover{border-color:var(--purple-l);color:var(--purple)}
+.radar-wrap img{width:100%;max-width:520px;display:block;margin:0 auto}
+.stats-card{background:#fbfbfe;border:1px solid #eceef8;border-radius:20px;padding:26px 30px;margin-top:10px;box-shadow:0 8px 24px rgba(30,30,80,.06)}
+.stats-row{display:flex;justify-content:space-around;gap:14px;flex-wrap:wrap}
+.stat b{font-size:30px;font-weight:800;color:var(--purple)}
+.stat span{font-size:14px;color:var(--muted);margin-left:6px}
+.stats-row + .stats-row{margin-top:14px;justify-content:center}
+h2.title{font-size:40px;font-weight:800;letter-spacing:-.01em;margin:70px 0 40px}
+h2.title .accent{color:var(--purple-l)}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.card{background:var(--card);border:1px solid transparent;border-radius:24px;padding:38px 34px;transition:transform .25s ease,box-shadow .25s ease,border-color .25s,background .25s}
+.card:hover{transform:translateY(-8px);box-shadow:0 24px 48px rgba(93,63,211,.14);border-color:var(--purple-l);background:#fbfbfe}
+.card .ico{font-size:34px;margin-bottom:22px}
+.card h3{font-size:22px;font-weight:800;margin-bottom:12px}
+.card p{font-size:16px;color:var(--muted)}
+.tag{display:inline-block;margin-top:22px;color:var(--purple);font-size:14px;font-weight:700;border-bottom:1px dashed #b9a8f5;padding-bottom:4px}
+.step .num{font-size:56px;font-weight:800;color:#cfc3f8;line-height:1;margin-bottom:18px}
+.mid-cta{text-align:center;margin:56px 0 20px}
+.final{background:#e7e5f6;border-radius:32px;text-align:center;padding:90px 30px;margin:80px 0 60px}
+.final h2{font-size:44px;font-weight:800;margin-bottom:14px}
+.final p{font-size:18px;color:#5b5f76;margin-bottom:36px}
+footer{border-top:1px solid #e2e4f0;padding:30px 0 46px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;color:#9aa0b4;font-size:15px}
+@media(max-width:960px){.hero{grid-template-columns:1fr}h1{font-size:40px}.cards{grid-template-columns:1fr}header{flex-wrap:wrap}.final h2{font-size:32px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="logo"><b>NetBrain</b><span>Power</span></div>
+  <nav><a href="#method">О методике</a><a href="https://audit.netbrainpower.ru/?src=site">Оценка</a><a href="#contacts">Контакты</a></nav>
+  <div class="pill">⚡ апробировано в федеральном дискаунтере (сеть 500+ магазинов)</div>
+</header>
+
+<section class="hero">
+  <div>
+    <div class="eyebrow">✦ Магистратура РАНХиГС</div>
+    <h1><span class="accent">ИИ-стратегия</span><br>для компаний, которые хотят результат</h1>
+    <p>От оценки зрелости до внедрения ИИ-агентов с измеримым ROI.<br>Научный подход + бизнес-практика.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://audit.netbrainpower.ru/?src=site">Пройти оценку ИИ-зрелости</a>
+      <a class="btn btn-ghost" href="#method">Узнать больше</a>
+    </div>
+  </div>
+  <div class="radar-wrap">
+    <img src="/radar-hero.png" alt="Радар ИИ-зрелости: текущее, целевое, бенчмарк">
+    <div class="stats-card">
+      <div class="stats-row">
+        <div class="stat"><b>35</b><span>критериев</span></div>
+        <div class="stat"><b>7</b><span>измерений</span></div>
+        <div class="stat"><b>15</b><span>минут</span></div>
+      </div>
+      <div class="stats-row">
+        <div class="stat"><b>0</b><span>₽ экспресс-отчёт</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="method">
+  <h2 class="title">Что вы <span class="accent">получите</span></h2>
+  <div class="cards">
+    <div class="card"><div class="ico">📊</div><h3>Детальный отчёт</h3><p>Радар по 7 осям зрелости, уровень компании, топ-3 инсайта для развития</p><span class="tag">✦ интерактивный дашборд</span></div>
+    <div class="card"><div class="ico">📈</div><h3>Отраслевые бенчмарки</h3><p>Сравнение с компаниями вашей отрасли и размера</p><span class="tag">✦ позиционирование</span></div>
+    <div class="card"><div class="ico">🗺️</div><h3>Дорожная карта</h3><p>Приоритетные инициативы для перехода на следующий уровень</p><span class="tag">✦ пошаговый план</span></div>
+  </div>
+</section>
+
+<section>
+  <h2 class="title">Как это <span class="accent">работает</span></h2>
+  <div class="cards">
+    <div class="card step"><div class="num">1</div><h3>Опросник</h3><p>35 вопросов с подсказками за 10–15 минут</p><span class="tag">✦ заполните онлайн</span></div>
+    <div class="card step"><div class="num">2</div><h3>Отчёт на email</h3><p>Радар, уровень, инсайты — приходит сразу</p><span class="tag">✦ моментальная выгрузка</span></div>
+    <div class="card step"><div class="num">3</div><h3>Дорожная карта</h3><p>Конкретные шаги с приоритетами</p><span class="tag">✦ готовый план действий</span></div>
+  </div>
+  <div class="mid-cta"><a class="btn btn-primary" href="https://audit.netbrainpower.ru/?src=site">Начать бесплатную оценку →</a></div>
+</section>
+
+<section class="final">
+  <h2>Готовы узнать свой уровень?</h2>
+  <p>15 минут — и у вас полная карта ИИ-зрелости компании</p>
+  <a class="btn btn-primary" href="https://audit.netbrainpower.ru/?src=site">Пройти бесплатную оценку →</a>
+</section>
+
+<footer id="contacts">
+  <div>© 2026 NetBrainPower · ИИ-стратегия для компаний</div>
+  <div>Методика разработана в рамках магистерской диссертации РАНХиГС</div>
+</footer>
+</div>
+</body>
+</html>

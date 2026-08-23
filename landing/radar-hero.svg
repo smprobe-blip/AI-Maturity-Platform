@@ -1,0 +1,42 @@
+<svg width="880" height="860" viewBox="0 0 880 860" xmlns="http://www.w3.org/2000/svg">
+<circle cx="440" cy="450" r="280" fill="#e0e7ff" opacity="0.35"/>
+<circle cx="440" cy="450" r="224" fill="#dbeafe" opacity="0.35"/>
+<circle cx="440" cy="450" r="168" fill="#dcfce7" opacity="0.35"/>
+<circle cx="440" cy="450" r="112" fill="#fef9c3" opacity="0.35"/>
+<circle cx="440" cy="450" r="56" fill="#fee2e2" opacity="0.35"/>
+<line x1="440" y1="450" x2="440.0" y2="170.0" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="440.0" y="108.4" font-family="Inter,-apple-system,sans-serif" font-size="20" font-weight="700" fill="#1f2937" text-anchor="middle" dominant-baseline="middle">Стратегия</text>
+<line x1="440" y1="450" x2="658.9" y2="275.4" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="707.1" y="237.0" font-family="Inter,-apple-system,sans-serif" font-size="20" font-weight="700" fill="#1f2937" text-anchor="start" dominant-baseline="middle">Люди</text>
+<line x1="440" y1="450" x2="713.0" y2="512.3" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="773.0" y="526.0" font-family="Inter,-apple-system,sans-serif" font-size="20" font-weight="700" fill="#1f2937" text-anchor="start" dominant-baseline="middle">Инфра</text>
+<line x1="440" y1="450" x2="561.5" y2="702.3" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="588.2" y="757.8" font-family="Inter,-apple-system,sans-serif" font-size="20" font-weight="700" fill="#1f2937" text-anchor="start" dominant-baseline="middle">Данные</text>
+<line x1="440" y1="450" x2="318.5" y2="702.3" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="291.8" y="757.8" font-family="Inter,-apple-system,sans-serif" font-size="20" font-weight="700" fill="#1f2937" text-anchor="end" dominant-baseline="middle">Модели</text>
+<line x1="440" y1="450" x2="167.0" y2="512.3" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="107.0" y="526.0" font-family="Inter,-apple-system,sans-serif" font-size="20" font-weight="700" fill="#1f2937" text-anchor="end" dominant-baseline="middle">Внедрение</text>
+<line x1="440" y1="450" x2="221.1" y2="275.4" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="172.9" y="237.0" font-family="Inter,-apple-system,sans-serif" font-size="20" font-weight="700" fill="#1f2937" text-anchor="end" dominant-baseline="middle">R&D</text>
+<polygon points="440.0,282.0 549.5,362.7 592.9,484.9 503.2,581.2 386.5,561.0 303.5,481.2 378.7,401.1" fill="none" stroke="#9ca3af" stroke-width="2.5" stroke-dasharray="7 5"/>
+<rect x="434.0" y="276.0" width="12" height="12" fill="#9ca3af" transform="rotate(45 440.0 282.0)"/>
+<rect x="543.5" y="356.7" width="12" height="12" fill="#9ca3af" transform="rotate(45 549.5 362.7)"/>
+<rect x="586.9" y="478.9" width="12" height="12" fill="#9ca3af" transform="rotate(45 592.9 484.9)"/>
+<rect x="497.2" y="575.2" width="12" height="12" fill="#9ca3af" transform="rotate(45 503.2 581.2)"/>
+<rect x="380.5" y="555.0" width="12" height="12" fill="#9ca3af" transform="rotate(45 386.5 561.0)"/>
+<rect x="297.5" y="475.2" width="12" height="12" fill="#9ca3af" transform="rotate(45 303.5 481.2)"/>
+<rect x="372.7" y="395.1" width="12" height="12" fill="#9ca3af" transform="rotate(45 378.7 401.1)"/>
+<polygon points="440.0,226.0 593.2,327.8 647.5,497.4 527.5,631.6 362.2,611.5 248.9,493.6 334.9,366.2" fill="none" stroke="#10b981" stroke-width="2.5" stroke-dasharray="4 4"/>
+<polygon points="440.0,360.4 632.6,296.4 538.3,472.4 478.9,530.7 401.1,530.7 374.5,465.0 378.7,401.1" fill="#3b82f6" fill-opacity="0.18" stroke="#2563eb" stroke-width="4" stroke-linejoin="round"/>
+<circle cx="440.0" cy="360.4" r="9" fill="#ef4444" stroke="#ffffff" stroke-width="4"/>
+<circle cx="632.6" cy="296.4" r="9" fill="#ef4444" stroke="#ffffff" stroke-width="4"/>
+<circle cx="538.3" cy="472.4" r="9" fill="#ef4444" stroke="#ffffff" stroke-width="4"/>
+<circle cx="478.9" cy="530.7" r="9" fill="#ef4444" stroke="#ffffff" stroke-width="4"/>
+<circle cx="401.1" cy="530.7" r="9" fill="#ef4444" stroke="#ffffff" stroke-width="4"/>
+<circle cx="374.5" cy="465.0" r="9" fill="#ef4444" stroke="#ffffff" stroke-width="4"/>
+<circle cx="378.7" cy="401.1" r="9" fill="#ef4444" stroke="#ffffff" stroke-width="4"/>
+<g font-family="Inter,-apple-system,sans-serif" font-size="19" fill="#334155">
+<line x1="30" y1="40" x2="66" y2="40" stroke="#2563eb" stroke-width="4"/><text x="80" y="47">Текущее</text>
+<line x1="30" y1="76" x2="66" y2="76" stroke="#10b981" stroke-width="3" stroke-dasharray="4 4"/><text x="80" y="83">Целевое</text>
+<line x1="30" y1="112" x2="66" y2="112" stroke="#9ca3af" stroke-width="3" stroke-dasharray="7 5"/><text x="80" y="119">Бенчмарк</text></g>
+</svg>
