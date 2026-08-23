@@ -34,10 +34,31 @@
 
 ## 🔥 Очередь (приоритет)
 
-- [ ] **START**: публикация поста в Telegram (сегодня!)
-- [ ] SEC-2: смена порта SSH 22 → нестандартный
-- [ ] 6.8: админ-панель лидов (конверсия по источникам)
-- [ ] Подготовка партнёрских постов (3-5 каналов)
+### EMAIL-1: Отправка отчётов через Yandex Cloud Postbox
+**Статус:** диагностика проведена, выбран провайдер  
+**Блокер для:** полноценного сбора данных (респонденты не получают PDF-отчёт)
+
+Симптомы:
+- POST `/api/v1/public/audits/{id}/email` → 500 Internal Server Error
+- POST `/api/v1/public/audits/{id}/service-request` → 500 Internal Server Error
+- Лог: `EmailService: send failed: [Errno -3] Temporary failure in name resolution`
+
+Причина: SMTP_HOST=mailhog (дефолт dev-окружения) — в production контейнера нет
+
+План внедрения:
+- [ ] Создать API-ключ `yc.postbox.send` в консоли Yandex Cloud
+- [ ] Добавить домен `netbrainpower.ru` в Postbox, получить 2 CNAME-записи для DKIM
+- [ ] Прописать CNAME в DNS Timeweb, дождаться статуса Verified
+- [ ] Создать отправителя `reports@netbrainpower.ru`
+- [ ] Добавить в .env на VPS: SMTP_HOST=postbox.cloud.yandex.net, SMTP_PORT=465, SMTP_USER/PASSWORD, SMTP_USE_TLS=true
+- [ ] Патч `email_service.py`: поддержка SMTP_SSL (порт 465) + graceful degradation
+- [ ] Тест через POST `/api/v1/admin/email/send-test`
+- [ ] Проверка доставки на реальный email + отсутствие в спаме
+
+### START: публикация поста в Telegram (после EMAIL-1)
+### SEC-2: смена порта SSH 22 → нестандартный
+### 6.8: админ-панель лидов (конверсия по источникам)
+### Подготовка партнёрских постов (3-5 каналов)
 
 ## 📋 Пул задач
 
@@ -76,3 +97,13 @@
 **Симптом:** `docker build` падал с `429 Too Many Requests`.
 
 **Решение:** флаг `--pull=false` в `docker compose build` — используем уже скачанные образы.
+
+### Email-отправка (EMAIL-1, в работе)
+**Симптом:** 500 при отправке отчёта/заявки, лог: `Temporary failure in name resolution`.
+
+**Причина:** SMTP_HOST=mailhog (dev-дефолт), контейнера mailhog в production нет.
+
+**Решение (запланировано):** Yandex Cloud Postbox (SMTP_SSL на порту 465).
+- Данные в РФ (152-ФЗ)
+- DKIM/SPF/DMARC из коробки
+- Нужны 2 CNAME-записи для верификации домена
