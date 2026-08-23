@@ -62,10 +62,16 @@ export function UpsellFunnel({ triggers, auditId }: UpsellFunnelProps) {
 
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg border border-blue-100 p-6 mb-6">
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
         <span className="text-2xl"></span>
         <h2 className="text-xl font-bold text-gray-900">Персональный план развития</h2>
+        <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+          🔧 В разработке
+        </span>
       </div>
+      <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-6">
+        🚧 Блок находится в разработке — запрос персонального плана станет доступен в следующем релизе.
+      </p>
 
       {/* Progress Bar */}
       <div className="flex items-center justify-between mb-8 relative">
@@ -205,13 +211,14 @@ export function UpsellFunnel({ triggers, auditId }: UpsellFunnelProps) {
           </button>
           {step < 4 ? (
             <button
-              onClick={() => setStep(Math.min(4, step + 1))}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm transition-colors"
+              disabled
+              title="Функция в разработке"
+              className="px-6 py-2 bg-gray-300 text-gray-500 rounded-lg font-medium shadow-sm cursor-not-allowed"
             >
               Далее →
             </button>
           ) : (
-            <div className="text-sm text-gray-500 self-center">Заполните форму для завершения</div>
+            <div className="text-sm text-amber-600 self-center font-medium">🚧 Функция в разработке</div>
           )}
         </div>
       )}
