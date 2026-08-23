@@ -52,6 +52,32 @@ def detect_pattern(
             severity='critical',
         )
 
+    # Якорь: одна ось значительно выше остальных при слабом фоне
+    top = max(scores)
+    top_idx = scores.index(top) + 1
+    others_avg = _avg(sorted(scores, reverse=True)[1:])
+    if top - others_avg > 1.2 and others_avg < 2.6:
+        if top_idx == 2:
+            return PatternInfo(
+                pattern_type='people_anchor',
+                diagnosis='Сильная команда при системном отставании',
+                recommendation=(
+                    'Ваша опора — люди и культура. Используйте вовлечённую команду как двигатель '
+                    'трансформации: начните с быстрых ИИ-пилотов (quick wins), параллельно выстраивая '
+                    'стратегию и инфраструктуру.'
+                ),
+                severity='warning',
+            )
+        return PatternInfo(
+            pattern_type='single_anchor',
+            diagnosis=f'Локальная сила: {DIM_NAMES[str(top_idx)]}',
+            recommendation=(
+                f'Ось «{DIM_NAMES[str(top_idx)]}» заметно сильнее остальных. '
+                'Опирайтесь на неё: выстраивайте смежные процессы от сильной стороны.'
+            ),
+            severity='warning',
+        )
+
     tech_avg = _avg([scores[2], scores[3], scores[4]])
     people_score = scores[1]
     if tech_avg - people_score > 1.2:

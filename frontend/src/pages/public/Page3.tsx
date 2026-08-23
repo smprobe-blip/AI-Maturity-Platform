@@ -382,9 +382,17 @@ export default function Page3() {
             {reportType === 'executive' && 'Получите шаблон AI Governance Canvas для обоснования бюджета'}
             {reportType === 'comprehensive' && 'Обсудите запуск Центра ИИ-компетенций в вашей компании'}
           </p>
-          <Button size="lg" onClick={handleSendEmail}>
+          <button
+            disabled
+            onClick={handleSendEmail}
+            title="Функция в разработке"
+            className="inline-flex items-center justify-center px-8 py-3 rounded-lg text-base font-medium bg-gray-300 text-gray-500 cursor-not-allowed shadow-sm"
+          >
             📧 Получить полный отчёт на email
-          </Button>
+          </button>
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3 inline-block">
+            🔧 Отправка отчётов на email в разработке — станет доступна в следующем релизе
+          </p>
         </div>
 
         {/* Action buttons */}
