@@ -1,6 +1,8 @@
-"""
-Professional PDF Report Generation Service using WeasyPrint.
-Без эмодзи — только SVG-иконки для 100% надёжного рендеринга.
+"""Professional PDF Report Generation Service using WeasyPrint.
+v2.1: компактный двухстраничный отчёт.
+Стр.1: резюме + выводы + радар/диагноз + анализ осей.
+Стр.2: методика (в начале) → план 90 дней → мягкий CTA.
+Без цен внутри отчёта — CTA на netbrainpower.ru.
 """
 import math
 from datetime import datetime
@@ -15,30 +17,66 @@ MATURITY_LEVELS = {
     'AI-Native': {'color': '#EDE9FE', 'text': '#4C1D95', 'min': 4.3, 'max': 5.0},
 }
 
-DIMENSION_NAMES = {
-    '1': 'Стратегия', '2': 'Люди', '3': 'Инфра',
-    '4': 'Данные', '5': 'Модели', '6': 'Внедрение', '7': 'R&D',
-}
-
-# SVG-иконки вместо эмодзи
-DIMENSION_ICONS = {
-    '1': '<circle cx="12" cy="12" r="10" fill="#3B82F6"/><path d="M12 6v6l4 2" stroke="white" stroke-width="2" fill="none"/>',
-    '2': '<circle cx="8" cy="8" r="3" fill="#10B981"/><circle cx="16" cy="8" r="3" fill="#10B981"/><path d="M6 18c0-2 2-3 4-3h4c2 0 4 1 4 3" stroke="#10B981" stroke-width="2" fill="none"/>',
-    '3': '<circle cx="12" cy="12" r="4" fill="#6B7280"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="#6B7280" stroke-width="2"/>',
-    '4': '<rect x="3" y="3" width="18" height="18" rx="2" fill="#8B5CF6"/><path d="M7 14l3-3 3 3 4-4" stroke="white" stroke-width="2" fill="none"/>',
-    '5': '<rect x="4" y="4" width="16" height="16" rx="3" fill="#EF4444"/><circle cx="9" cy="10" r="2" fill="white"/><circle cx="15" cy="10" r="2" fill="white"/><path d="M8 15c1 1 3 1 4 0s3-1 4 0" stroke="white" stroke-width="1.5" fill="none"/>',
-    '6': '<path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" fill="#F59E0B"/>',
-    '7': '<circle cx="12" cy="12" r="3" fill="#EC4899"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.5 2.5M16.5 16.5L19 19M5 19l2.5-2.5M16.5 7.5L19 5" stroke="#EC4899" stroke-width="2"/>',
-}
-
 DIM_ORDER = ['1', '2', '3', '4', '5', '6', '7']
+
+DIM_META = {
+    '1': {'name': 'Стратегия и управление', 'short': 'Стратегия', 'desc': 'ИИ-видение, роадмап, бюджет, вовлечённость топ-менеджмента'},
+    '2': {'name': 'Люди и культура', 'short': 'Люди', 'desc': 'Компетенции, роли, культура экспериментов, change management'},
+    '3': {'name': 'Инфраструктура', 'short': 'Инфраструктура', 'desc': 'Вычисления, хранение, MLOps, среды разработки'},
+    '4': {'name': 'Данные', 'short': 'Данные', 'desc': 'Качество, доступность, governance, пайплайны данных'},
+    '5': {'name': 'Модели', 'short': 'Модели', 'desc': 'ML/LLM-решения, точность, мониторинг, эксплуатация'},
+    '6': {'name': 'Внедрение ИИ', 'short': 'Внедрение', 'desc': 'Продакшен-сценарии, ROI, процессы внедрения'},
+    '7': {'name': 'Исследования (R&D)', 'short': 'R&D', 'desc': 'Эксперименты, партнёрства, публикации, патенты'},
+}
 
 INDUSTRY_MAP = {
     'it': 'IT', 'retail': 'Retail', 'finance': 'Finance',
     'manufacturing': 'Manufacturing', 'services': 'Services',
     'healthcare': 'Healthcare', 'education': 'Education',
-    'government': 'Government', 'other': 'Другое', 'crossindustry': 'Кросс-отраслевой'
+    'government': 'Госсектор', 'other': 'Другое', 'crossindustry': 'Кросс-отраслевой',
+    'ecommerce': 'E-commerce', 'fintech': 'Финтех', 'telecom': 'Телеком',
+    'logistics': 'Логистика', 'energy': 'Энергетика',
 }
+
+ACTION_STEPS = {
+    '1': [
+        ('Провести ИИ-стратегическую сессию с топ-менеджментом', 'CEO', '2 дня'),
+        ('Утвердить роадмап на 12 мес с 3 измеримыми целями', 'Стратег-блок', '30 дней'),
+        ('Закрепить ИИ-бюджет отдельной статьёй', 'CFO', '60 дней'),
+    ],
+    '2': [
+        ('Назначить AI-чемпионов в каждом подразделении', 'HRD', '30 дней'),
+        ('Запустить курс ИИ-грамотности для 20% сотрудников', 'L&D', '60 дней'),
+        ('Включить ИИ-инициативы в KPI руководителей', 'CEO', '90 дней'),
+    ],
+    '3': [
+        ('Провести аудит вычислительных ресурсов и облачных затрат', 'CTO', '30 дней'),
+        ('Развернуть dev-среду для ИИ-пилотов', 'CTO', '60 дней'),
+        ('Утвердить политику безопасности ИИ-инструментов', 'CISO', '90 дней'),
+    ],
+    '4': [
+        ('Определить топ-3 самых ценных дата-активов', 'CDO', '30 дней'),
+        ('Назначить владельцев данных и метрики качества', 'CDO', '60 дней'),
+        ('Построить пилотный пайплайн с мониторингом качества', 'Data Lead', '90 дней'),
+    ],
+    '5': [
+        ('Выбрать 2–3 use case с быстрым измеримым эффектом', 'AI Lead', '30 дней'),
+        ('Построить baseline-модель или выбрать vendor-решение', 'AI Lead', '60 дней'),
+        ('Настроить мониторинг точности и дрейфа', 'MLOps', '90 дней'),
+    ],
+    '6': [
+        ('Запустить 2–3 ИИ-пилота с бизнес-владельцами', 'Бизнес-владелец', '6–8 нед.'),
+        ('Определить критерии успеха пилотов в деньгах/времени', 'CEO', '30 дней'),
+        ('Внедрить ежемесячное ревью ИИ-инициатив', 'CEO', 'постоянно'),
+    ],
+    '7': [
+        ('Установить партнёрство с 1–2 университетами', 'R&D Lead', '60 дней'),
+        ('Подать заявку на 1 грант в квартал', 'R&D Lead', 'ежеквартально'),
+        ('Публиковать 1 кейс/статью в полугодие', 'R&D + Marketing', '6 мес'),
+    ],
+}
+
+SEVERITY_COLORS = {'critical': '#DC2626', 'warning': '#D97706', 'info': '#2563EB', 'success': '#059669'}
 
 
 def get_industry(audit_data: Dict) -> str:
@@ -49,360 +87,232 @@ def get_industry(audit_data: Dict) -> str:
     )
     if not industry:
         return 'Не указана'
-    clean_industry = industry.lower().strip()
-    return INDUSTRY_MAP.get(clean_industry, industry.capitalize())
+    return INDUSTRY_MAP.get(industry.lower().strip(), industry.capitalize())
 
 
-def icon_svg(dim_id: str, size: int = 24) -> str:
-    """Возвращает SVG-иконку для оси."""
-    icon_content = DIMENSION_ICONS.get(dim_id, '<circle cx="12" cy="12" r="10" fill="#9CA3AF"/>')
-    return f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 6px;">{icon_content}</svg>'
+def _bar_color(score: float) -> str:
+    if score <= 1.8: return '#EF4444'
+    if score <= 2.6: return '#F59E0B'
+    if score <= 3.4: return '#10B981'
+    if score <= 4.2: return '#3B82F6'
+    return '#8B5CF6'
 
 
-def section_icon_svg(icon_type: str) -> str:
-    """Иконки для заголовков разделов."""
-    icons = {
-        'summary': '<circle cx="12" cy="12" r="10" fill="#3B82F6"/><path d="M8 12l3 3 5-6" stroke="white" stroke-width="2" fill="none"/>',
-        'radar': '<circle cx="12" cy="12" r="10" fill="none" stroke="#3B82F6" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="none" stroke="#3B82F6" stroke-width="2"/><circle cx="12" cy="12" r="2" fill="#3B82F6"/>',
-        'services': '<path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" fill="#F59E0B"/>',
-    }
-    content = icons.get(icon_type, '')
-    return f'<svg width="28" height="28" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 8px;">{content}</svg>'
+def _band_phrase(score: float) -> str:
+    if score <= 1.8: return 'начальный уровень: процессы стихийные, системного подхода нет'
+    if score <= 2.6: return 'уровень enabled: есть отдельные инициативы, но нет системы'
+    if score <= 3.4: return 'уровень driven: процессы стандартизированы и управляются'
+    if score <= 4.2: return 'уровень first: ИИ встроен в ключевые бизнес-процессы'
+    return 'уровень native: ИИ — ядро бизнес-модели'
 
 
-def generate_score_bar(score: float, max_score: float = 5.0) -> str:
-    percentage = (score / max_score) * 100
-    if score <= 1.8: color = '#EF4444'
-    elif score <= 2.6: color = '#F59E0B'
-    elif score <= 3.4: color = '#10B981'
-    elif score <= 4.2: color = '#3B82F6'
-    else: color = '#8B5CF6'
-    
-    return f"""
-    <div style="background: #F3F4F6; border-radius: 4px; height: 8px; overflow: hidden; margin: 4px 0;">
-        <div style="background: {color}; width: {percentage:.0f}%; height: 100%; border-radius: 4px;"></div>
-    </div>
-    """
+def generate_radar_svg(current: Dict, benchmark: Optional[Dict] = None,
+                       target: Optional[Dict] = None, size: int = 230) -> str:
+    cx = cy = size / 2
+    R = size * 0.34
+    names = [DIM_META[str(i + 1)]['short'] for i in range(7)]
 
+    def pt(i: int, v: float):
+        ang = math.radians(-90 + i * 360 / 7)
+        r = R * max(0.0, min(5.0, v)) / 5.0
+        return cx + r * math.cos(ang), cy + r * math.sin(ang)
 
-def generate_radar_svg(current: Dict[str, float], benchmark: Optional[Dict[str, float]], target: Optional[Dict[str, float]]) -> str:
-    """Радар зрелости без эмодзи."""
-    target = target or {str(i): 4.0 for i in range(1, 8)}
-    
-    width, height = 500, 620
-    cx, cy = width / 2, height / 2 - 40
-    radius = 180
-    max_score = 5.0
-    n = len(DIM_ORDER)
-    angle_step = 2 * math.pi / n
-    
-    def get_point(dim_idx: int, score: float) -> tuple:
-        angle = angle_step * dim_idx - math.pi / 2
-        r = (score / max_score) * radius
-        return cx + r * math.cos(angle), cy + r * math.sin(angle)
-    
-    svg = [f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" style="margin: 20px auto; display: block;">']
-    
-    # Фоновые концентрические зоны
-    zones = [
-        (1.8, '#FEE2E2', 0.8), (2.6, '#FEF3C7', 0.8), (3.4, '#DCFCE7', 0.8),
-        (4.2, '#DBEAFE', 0.8), (5.0, '#EDE9FE', 0.8),
-    ]
-    for zone_max, color, opacity in reversed(zones):
-        r = (zone_max / max_score) * radius
-        svg.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{color}" opacity="{opacity}"/>')
-    
-    # Оси и подписи
-    for i, dim_id in enumerate(DIM_ORDER):
-        x, y = get_point(i, max_score)
-        svg.append(f'<line x1="{cx}" y1="{cy}" x2="{x}" y2="{y}" stroke="#9CA3AF" stroke-width="1.5"/>')
-        lx, ly = get_point(i, max_score + 0.5)
-        svg.append(f'<text x="{lx}" y="{ly}" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="700" fill="#1F2937">{DIMENSION_NAMES[dim_id]}</text>')
-    
-    # Бенчмарк
+    parts = [f'<svg width="{size}" height="{size}" viewBox="0 0 {size} {size}">']
+    for level in (1, 2, 3, 4, 5):
+        pts = ' '.join(f'{pt(i, level)[0]:.1f},{pt(i, level)[1]:.1f}' for i in range(7))
+        parts.append(f'<polygon points="{pts}" fill="none" stroke="#E5E7EB" stroke-width="1"/>')
+    for i in range(7):
+        x, y = pt(i, 5)
+        parts.append(f'<line x1="{cx}" y1="{cy}" x2="{x:.1f}" y2="{y:.1f}" stroke="#E5E7EB" stroke-width="1"/>')
+        lx, ly = pt(i, 6.1)
+        parts.append(f'<text x="{lx:.1f}" y="{ly:.1f}" font-size="{max(8, size // 28)}" fill="#374151" text-anchor="middle" font-weight="bold">{names[i]}</text>')
+
+    def poly(vals, color, fill_op, dash=''):
+        pts = ' '.join(f'{pt(i, vals[i])[0]:.1f},{pt(i, vals[i])[1]:.1f}' for i in range(7))
+        d = f' stroke-dasharray="{dash}"' if dash else ''
+        return f'<polygon points="{pts}" fill="{color}" fill-opacity="{fill_op}" stroke="{color}" stroke-width="2"{d}/>'
+
     if benchmark:
-        pts = [get_point(i, benchmark.get(dim, 0)) for i, dim in enumerate(DIM_ORDER)]
-        pts_str = ' '.join(f'{x:.1f},{y:.1f}' for x, y in pts)
-        svg.append(f'<polygon points="{pts_str}" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-dasharray="6,4"/>')
-        for x, y in pts:
-            svg.append(f'<path d="M {x-6} {y} L {x} {y-6} L {x+6} {y} L {x} {y+6} Z" fill="#9CA3AF" stroke="white" stroke-width="1.5"/>')
-    
-    # Целевое
-    pts_target = [get_point(i, target.get(dim, 0)) for i, dim in enumerate(DIM_ORDER)]
-    pts_target_str = ' '.join(f'{x:.1f},{y:.1f}' for x, y in pts_target)
-    svg.append(f'<polygon points="{pts_target_str}" fill="none" stroke="#10B981" stroke-width="2.5" stroke-dasharray="6,4"/>')
-    
-    # Текущее
-    pts_current = [get_point(i, current.get(dim, 0)) for i, dim in enumerate(DIM_ORDER)]
-    pts_current_str = ' '.join(f'{x:.1f},{y:.1f}' for x, y in pts_current)
-    svg.append(f'<polygon points="{pts_current_str}" fill="rgba(59, 130, 246, 0.15)" stroke="#3B82F6" stroke-width="3"/>')
-    for x, y in pts_current:
-        svg.append(f'<circle cx="{x}" cy="{y}" r="8" fill="#EF4444" stroke="white" stroke-width="2.5"/>')
-        svg.append(f'<circle cx="{x}" cy="{y}" r="3" fill="white"/>')
-    
-    # Легенда
-    legend_y = 30
-    legend_items = [
-        ('#3B82F6', '', 'Текущее'),
-        ('#10B981', '6,4', 'Целевое'),
-        ('#9CA3AF', '6,4', 'Бенчмарк'),
-    ]
-    for i, (color, dash, label) in enumerate(legend_items):
-        ly = legend_y + i * 22
-        svg.append(f'<line x1="30" y1="{ly}" x2="60" y2="{ly}" stroke="{color}" stroke-width="3" stroke-dasharray="{dash}"/>')
-        svg.append(f'<text x="70" y="{ly}" dominant-baseline="middle" font-size="12" fill="#374151" font-weight="600">{label}</text>')
-    
-    # Шкала уровней
-    scale_y = cy + radius + 60
-    scale_width = 420
-    scale_height = 20
-    scale_x = (width - scale_width) / 2
-    
-    svg.append('<defs><linearGradient id="maturityGradient" x1="0%" y1="0%" x2="100%" y2="0%">')
-    svg.append('<stop offset="0%" style="stop-color:#FEE2E2;stop-opacity:1" />')
-    svg.append('<stop offset="20%" style="stop-color:#FEF3C7;stop-opacity:1" />')
-    svg.append('<stop offset="40%" style="stop-color:#DCFCE7;stop-opacity:1" />')
-    svg.append('<stop offset="60%" style="stop-color:#DBEAFE;stop-opacity:1" />')
-    svg.append('<stop offset="80%" style="stop-color:#EDE9FE;stop-opacity:1" />')
-    svg.append('<stop offset="100%" style="stop-color:#EDE9FE;stop-opacity:1" />')
-    svg.append('</linearGradient></defs>')
-    
-    svg.append(f'<rect x="{scale_x}" y="{scale_y}" width="{scale_width}" height="{scale_height}" rx="10" fill="url(#maturityGradient)" stroke="#E5E7EB" stroke-width="1"/>')
-    
-    level_names = ['Начальный', 'AI-Enabled', 'AI-Driven', 'AI-First', 'AI-Native']
-    level_ranges = ['1.0-1.8', '1.9-2.6', '2.7-3.4', '3.5-4.2', '4.3-5.0']
-    for i, (name, range_text) in enumerate(zip(level_names, level_ranges)):
-        x = scale_x + (i + 0.5) * (scale_width / 5)
-        svg.append(f'<text x="{x}" y="{scale_y + 35}" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="700">{name}</text>')
-        svg.append(f'<text x="{x}" y="{scale_y + 50}" text-anchor="middle" font-size="9" fill="#6B7280">{range_text}</text>')
-    
-    svg.append('</svg>')
-    return '\n'.join(svg)
+        parts.append(poly([float(benchmark.get(str(i + 1), 0)) for i in range(7)], '#9CA3AF', 0.0, '4 3'))
+    if target:
+        parts.append(poly([float(target.get(str(i + 1), 0)) for i in range(7)], '#10B981', 0.0, '2 2'))
+    parts.append(poly([float(current.get(str(i + 1), 0)) for i in range(7)], '#2563EB', 0.18))
+    parts.append('</svg>')
+    return ''.join(parts)
 
 
 def generate_speedometer_svg(score: float, max_score: float = 5.0) -> str:
-    percentage = score / max_score
-    if score <= 1.8: color = '#EF4444'
-    elif score <= 2.6: color = '#F59E0B'
-    elif score <= 3.4: color = '#10B981'
-    elif score <= 4.2: color = '#3B82F6'
-    else: color = '#8B5CF6'
-    
-    end_x = 20 + 160 * percentage
-    return f"""
-    <svg width="200" height="120" viewBox="0 0 220 130" style="margin: 10px auto; display: block;">
-        <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#E5E7EB" stroke-width="16" stroke-linecap="round"/>
-        <path d="M 20 100 A 80 80 0 0 1 {end_x:.1f} 100" fill="none" stroke="{color}" stroke-width="16" stroke-linecap="round"/>
-        <text x="100" y="95" text-anchor="middle" font-size="26" font-weight="bold" fill="{color}" font-family="DejaVu Sans, Arial, sans-serif">{score:.2f}</text>
-        <text x="100" y="112" text-anchor="middle" font-size="10" fill="#6B7280" font-family="DejaVu Sans, Arial, sans-serif">/ {max_score:.2f}</text>
-    </svg>
-    """
+    """Совместимость со старыми вызовами."""
+    return ''
+
+
+CSS = """
+@page { size: A4; margin: 10mm 10mm; }
+body { font-family: Helvetica, Arial, sans-serif; color: #111827; font-size: 9.5px; line-height: 1.35; }
+.page { page-break-after: always; }
+h1 { font-size: 17px; margin: 0 0 2px; }
+h2 { font-size: 12px; color: #1D4ED8; border-bottom: 2px solid #2563EB; padding-bottom: 3px; margin: 10px 0 6px; }
+h3 { font-size: 10.5px; margin: 8px 0 3px; }
+.big { font-size: 26px; font-weight: 800; color: #1D4ED8; }
+.of { font-size: 12px; color: #6B7280; }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-weight: 700; font-size: 10px; }
+.muted { color: #6B7280; font-size: 8.5px; }
+table { width: 100%; border-collapse: collapse; font-size: 8.5px; }
+th, td { padding: 3px 4px; border-bottom: 1px solid #E5E7EB; text-align: left; vertical-align: top; }
+th { color: #6B7280; font-size: 8px; text-transform: uppercase; }
+.bar { background: #E5E7EB; border-radius: 3px; height: 5px; width: 55px; }
+.bar div { height: 5px; border-radius: 3px; }
+.diag { padding: 7px 9px; border-radius: 6px; border-left: 4px solid; margin: 6px 0; }
+.cta { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 8px; text-align: center; margin-top: 8px; }
+ul.tight, ol.tight { margin: 4px 0; padding-left: 14px; }
+ul.tight li, ol.tight li { margin: 2px 0; }
+.col-left { float: left; width: 45%; text-align: center; }
+.col-right { float: right; width: 53%; }
+.clear { clear: both; }
+.head { display: flex; justify-content: space-between; align-items: baseline; }
+"""
 
 
 def generate_pdf_report(audit_data: Dict) -> bytes:
     indices = audit_data.get('calculated_indices', {})
-    dimension_scores = indices.get('dimension_scores', {})
-    composite_score = indices.get('composite_score', 0)
+    dimension_scores = {k: float(v) for k, v in indices.get('dimension_scores', {}).items()}
+    composite = float(indices.get('composite_score', 0))
     maturity_level = indices.get('maturity_level', 'Начальный')
     pattern = indices.get('pattern', {})
-    upsell_triggers = audit_data.get('upsell_triggers', [])
-    recommendations = audit_data.get('recommendations', [])
-    audit_id = audit_data.get('audit_id', 'N/A')
-    
-    industry = get_industry(audit_data)
+    benchmark_scores = indices.get('benchmark_scores') or {}
     target_scores = audit_data.get('request', {}).get('target_scores')
-    benchmark_scores = indices.get('benchmark_scores')
-    
+    audit_id = audit_data.get('audit_id', 'N/A')
+    industry = get_industry(audit_data)
+    date_str = datetime.now().strftime('%d.%m.%Y')
     level_info = MATURITY_LEVELS.get(maturity_level, MATURITY_LEVELS['Начальный'])
-    
-    # Цветной индикатор уровня
-    level_indicator = f'<span style="display: inline-block; width: 16px; height: 16px; border-radius: 50%; background: {level_info["text"]}; vertical-align: middle; margin-right: 6px;"></span>'
-    
+    sev_color = SEVERITY_COLORS.get(pattern.get('severity', 'info'), '#2563EB')
+
+    scores = {i: dimension_scores.get(i, 0.0) for i in DIM_ORDER}
+    strong = max(scores, key=scores.get)
+    weak = min(scores, key=scores.get)
+    gaps = {i: scores[i] - float(benchmark_scores.get(i, 0)) for i in DIM_ORDER} if benchmark_scores else {}
+    gap_axis = min(gaps, key=gaps.get) if gaps else None
+
+    takeaways = [
+        f"<strong>Сильная сторона:</strong> {DIM_META[strong]['name']} — {scores[strong]:.1f}/5. Опора для трансформации.",
+        f"<strong>Зона роста №1:</strong> {DIM_META[weak]['name']} — {scores[weak]:.1f}/5. Главный приоритет инвестиций.",
+    ]
+    if gap_axis is not None and gaps[gap_axis] < -0.3:
+        takeaways.append(
+            f"<strong>Разрыв с отраслью:</strong> {DIM_META[gap_axis]['name']} — {gaps[gap_axis]:+.1f} к бенчмарку. Отрасль уже ушла вперёд."
+        )
+    else:
+        takeaways.append(f"<strong>Общий уровень:</strong> {maturity_level} ({composite:.2f}/5).")
+
+    radar = generate_radar_svg(dimension_scores, benchmark_scores or None, target_scores)
+
+    # --- Таблица осей (стр. 1) ---
+    rows = []
+    for i in DIM_ORDER:
+        s = scores[i]
+        b = float(benchmark_scores.get(i, 0)) if benchmark_scores else None
+        gap_txt = f"{s - b:+.1f}" if b is not None else "—"
+        interp = _band_phrase(s)
+        if b is not None:
+            interp += "; ниже среднего по отрасли" if s - b < -0.4 else ("; выше среднего по отрасли" if s - b > 0.4 else "; вблизи среднего")
+        rows.append(
+            f"<tr><td><strong>{DIM_META[i]['name']}</strong></td>"
+            f"<td><div class='bar'><div style='width:{s / 5 * 100:.0f}%;background:{_bar_color(s)}'></div></div></td>"
+            f"<td><strong>{s:.1f}</strong></td><td>{b if b is not None else '—'}</td><td>{gap_txt}</td>"
+            f"<td>{interp}</td></tr>"
+        )
+    axes_table = (
+        "<table><tr><th>Ось</th><th>Оценка</th><th>Балл</th><th>Бенч.</th><th>Разрыв</th><th>Интерпретация</th></tr>"
+        + "".join(rows) + "</table>"
+    )
+
+    # --- Методика (стр. 2, в начале) ---
+    method_rows = "".join(
+        f"<tr><td><strong>{DIM_META[i]['short']}</strong></td><td>{DIM_META[i]['desc']}</td></tr>"
+        for i in DIM_ORDER
+    )
+    scale_cells = "".join(
+        f"<td style='background:{v['color']};color:{v['text']};font-weight:700;text-align:center;padding:4px;'>"
+        f"{k}<br/>{v['min']:.1f}–{v['max']:.1f}</td>"
+        for k, v in MATURITY_LEVELS.items()
+    )
+
+    # --- План 90 дней (стр. 2) ---
+    weak3 = sorted(scores, key=scores.get)[:3]
+    plan_blocks = []
+    for n, wid in enumerate(weak3, 1):
+        steps = "".join(
+            f"<li><strong>{what}</strong> — {owner}, {term}</li>"
+            for what, owner, term in ACTION_STEPS[wid]
+        )
+        plan_blocks.append(
+            f"<h3>Приоритет {n}: {DIM_META[wid]['name']} ({scores[wid]:.1f}/5)</h3><ol class='tight'>{steps}</ol>"
+        )
+
     html = f"""<!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            @page {{ size: A4; margin: 1.5cm; }}
-            @page :first {{ margin: 0; }}
-            body {{ 
-                font-family: 'DejaVu Sans', Arial, sans-serif; 
-                font-size: 10.5pt; 
-                line-height: 1.4; 
-                color: #1F2937; 
-                margin: 0; padding: 0; 
-            }}
-            .cover {{ 
-                background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%); 
-                color: white; text-align: center; 
-                padding: 80px 40px; min-height: 267mm; 
-                display: flex; flex-direction: column; justify-content: center; 
-                page-break-after: always; 
-            }}
-            .cover h1 {{ font-size: 32pt; font-weight: bold; margin: 0 0 15px 0; }}
-            .cover .subtitle {{ font-size: 14pt; opacity: 0.9; margin: 0 0 40px 0; }}
-            .cover .meta {{ font-size: 11pt; opacity: 0.85; line-height: 1.8; }}
-            
-            .section {{ margin: 15px 0; page-break-inside: avoid; }}
-            .section h2 {{ 
-                font-size: 15pt; color: #1E40AF; 
-                border-bottom: 2px solid #E5E7EB; 
-                padding-bottom: 6px; margin-bottom: 15px;
-                display: flex; align-items: center;
-            }}
-            .section h3 {{ font-size: 12pt; color: #374151; margin: 15px 0 8px 0; font-weight: 600; }}
-            
-            .score-card {{ 
-                background: #F9FAFB; border: 1px solid #E5E7EB; 
-                border-radius: 8px; padding: 15px; margin: 10px 0; text-align: center; 
-            }}
-            .score-card .score {{ 
-                font-size: 36pt; font-weight: bold; color: #1E40AF; 
-                margin: 0; line-height: 1; 
-                font-family: 'DejaVu Sans', Arial, sans-serif;
-            }}
-            .score-card .level {{ font-size: 13pt; color: #6B7280; margin: 6px 0 0 0; }}
-            
-            .dim-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 10px 0; }}
-            .dim-card {{ 
-                background: white; border: 1px solid #E5E7EB; 
-                border-radius: 6px; padding: 10px 12px; 
-            }}
-            .dim-card .header {{ display: flex; align-items: center; margin-bottom: 4px; }}
-            .dim-card .name {{ font-weight: 600; font-size: 10pt; color: #1F2937; }}
-            .dim-card .score {{ 
-                font-size: 16pt; font-weight: bold; color: #1E40AF; 
-                margin: 4px 0; line-height: 1;
-                font-family: 'DejaVu Sans', Arial, sans-serif;
-            }}
-            
-            .pattern-box {{ 
-                background: {level_info['color']}; 
-                border-left: 3px solid {level_info['text']}; 
-                padding: 12px 15px; border-radius: 6px; margin: 10px 0; 
-            }}
-            .pattern-box .diagnosis {{ font-size: 12pt; font-weight: bold; color: {level_info['text']}; margin: 0 0 6px 0; }}
-            .pattern-box p {{ margin: 0; font-size: 10pt; }}
-            
-            .upsell-card {{ 
-                background: white; border: 1px solid #BFDBFE; 
-                border-radius: 8px; padding: 15px; margin: 10px 0; 
-                page-break-inside: avoid;
-            }}
-            .upsell-card .service {{ font-size: 12pt; font-weight: bold; color: #1E40AF; margin: 0 0 10px 0; }}
-            .upsell-card .meta {{ display: flex; gap: 12px; margin: 10px 0; font-size: 9.5pt; }}
-            .upsell-card .meta-item {{ background: #EFF6FF; padding: 5px 10px; border-radius: 4px; }}
-            .upsell-card .meta-item .label {{ color: #6B7280; font-size: 8.5pt; }}
-            .upsell-card .meta-item .value {{ font-weight: bold; color: #1F2937; }}
-            .upsell-card .deliverables {{ margin: 10px 0 0 0; padding-left: 18px; font-size: 9.5pt; }}
-            .upsell-card .deliverables li {{ margin: 4px 0; color: #374151; }}
-            .case-box {{ background: #F0FDF4; padding: 8px 10px; border-radius: 4px; margin-top: 10px; font-size: 9.5pt; }}
-            
-            ul {{ margin: 6px 0; padding-left: 20px; }}
-            li {{ margin: 5px 0; font-size: 10pt; }}
-            
-            .footer {{ 
-                text-align: center; color: #9CA3AF; font-size: 8.5pt; 
-                margin-top: 20px; padding-top: 10px; border-top: 1px solid #E5E7EB; 
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="cover">
-            <h1>Отчёт об оценке зрелости ИИ</h1>
-            <div class="subtitle">AI Maturity Assessment Report</div>
-            <div class="meta">
-                <div>ID аудита: {audit_id}</div>
-                <div>Дата: {datetime.now().strftime('%d.%m.%Y')}</div>
-                <div>Отрасль: {industry}</div>
-                <div style="margin-top: 30px; font-size: 12pt;">AI Maturity Platform</div>
-            </div>
-        </div>
-        
-        <div class="section">
-            <h2>{section_icon_svg('summary')} Сводка результатов</h2>
-            <div class="score-card">
-                <div class="score">{composite_score:.2f} / 5.00</div>
-                <div class="level">Уровень зрелости: {level_indicator} {maturity_level}</div>
-            </div>
-            {generate_speedometer_svg(composite_score)}
-            
-            <h3>Оценки по осям</h3>
-            <div class="dim-grid">
-    """
-    
-    for dim_id in DIM_ORDER:
-        score = dimension_scores.get(dim_id, 0)
-        html += f"""
-                <div class="dim-card">
-                    <div class="header">
-                        {icon_svg(dim_id, 24)}
-                        <span class="name">{DIMENSION_NAMES.get(dim_id, dim_id)}</span>
-                    </div>
-                    <div class="score">{score:.1f}</div>
-                    {generate_score_bar(score)}
-                </div>
-        """
-    
-    html += """
-            </div>
-        </div>
-        
-        <div class="section">
-            <h2>""" + section_icon_svg('radar') + """ Радар зрелости</h2>
-    """
-    html += generate_radar_svg(dimension_scores, benchmark_scores, target_scores)
-    
-    if pattern:
-        html += f"""
-                <h3>Диагноз</h3>
-                <div class="pattern-box">
-                    <div class="diagnosis">{pattern.get('diagnosis', '') or pattern.get('name', '')}</div>
-                    <p>{pattern.get('recommendation', '') or pattern.get('description', '')}</p>
-                </div>
-        """
-    
-    if recommendations:
-        html += "<h3>Ключевые рекомендации</h3><ul>"
-        for rec in recommendations:
-            html += f"<li>{rec}</li>"
-        html += "</ul>"
-    
-    html += "</div>"
-    
-    if upsell_triggers:
-        html += """
-        <div class="section" style="page-break-before: always;">
-            <h2>""" + section_icon_svg('services') + """ Рекомендуемые услуги</h2>
-            <p style="color: #6B7280; font-size: 9.5pt; margin-bottom: 15px;">На основе результатов вашего аудита мы рекомендуем следующие услуги:</p>
-        """
-        for trigger in upsell_triggers[:3]:
-            html += f"""
-                <div class="upsell-card">
-                    <div class="service">{trigger.get('service', '')}</div>
-                    <div class="meta">
-                        <div class="meta-item"><div class="label">Срок</div><div class="value">{trigger.get('duration', '')}</div></div>
-                        <div class="meta-item"><div class="label">Инвестиции</div><div class="value">{trigger.get('price_hint', '')}</div></div>
-                    </div>
-            """
-            if trigger.get('deliverables'):
-                html += '<div style="margin: 8px 0;"><strong>Результаты:</strong><ul class="deliverables">'
-                for item in trigger['deliverables']:
-                    html += f"<li>{item}</li>"
-                html += "</ul></div>"
-            if trigger.get('case_study'):
-                html += f'<div class="case-box"><strong>Кейс:</strong> {trigger["case_study"]}</div>'
-            html += "</div>"
-        html += "</div>"
-    
-    html += f"""
-        <div class="footer">
-            <div style="font-size: 10pt; color: #1E40AF; margin-bottom: 6px; font-weight: bold;">AI Maturity Platform</div>
-            <div>Конфиденциально • {datetime.now().strftime('%d.%m.%Y')}</div>
-            <div style="margin-top: 10px; font-size: 8pt; color: #9CA3AF;">Отчёт подготовлен на основе предоставленных данных. Рекомендации носят консультационный характер.</div>
-        </div>
-    </body>
-    </html>
-    """
-    
+<html lang="ru"><head><meta charset="utf-8"><style>{CSS}</style></head>
+<body>
+
+<!-- СТРАНИЦА 1: РЕЗЮМЕ + АНАЛИЗ ОСЕЙ -->
+<div class="page">
+  <div class="head">
+    <div class="muted">ИНДЕКС ИИ-ЗРЕЛОСТИ • ОТЧЁТ ОБ ОЦЕНКЕ</div>
+    <div class="muted">{date_str}</div>
+  </div>
+  <h1>Индекс ИИ-зрелости вашей компании</h1>
+  <div class="muted">Отрасль: {industry} • Методика: 7 осей, 35 критериев • ID: {audit_id}</div>
+
+  <div style="margin:6px 0;">
+    <span class="big">{composite:.2f}</span><span class="of"> / 5.00</span>
+    <span class="badge" style="background:{level_info['color']};color:{level_info['text']};margin-left:8px;">{maturity_level}</span>
+  </div>
+
+  <h2>Три главных вывода</h2>
+  <ul class="tight">{''.join(f'<li>{t}</li>' for t in takeaways)}</ul>
+
+  <h2>Радар зрелости и диагноз</h2>
+  <div class="col-left">{radar}
+    <div class="muted">Синий — ваш профиль;<br/>серый пунктир — средний по отрасли</div>
+  </div>
+  <div class="col-right">
+    <div class="diag" style="border-color:{sev_color};background:{sev_color}11;">
+      <strong style="color:{sev_color};">Диагноз: {pattern.get('diagnosis', '—')}</strong><br/>
+      {pattern.get('recommendation', '')}
+    </div>
+  </div>
+  <div class="clear"></div>
+
+  <h2>Анализ по 7 осям зрелости</h2>
+  {axes_table}
+  <p class="muted" style="margin-top:4px;">Бенчмарк — средние значения по отрасли «{industry}» в базе исследования.</p>
+</div>
+
+<!-- СТРАНИЦА 2: МЕТОДИКА → ПЛАН 90 ДНЕЙ → CTA -->
+<div class="page">
+  <h2>Методика оценки</h2>
+  <table><tr><th style="width:22%;">Ось</th><th>Что измеряем</th></tr>{method_rows}</table>
+  <h3>Шкала уровней зрелости</h3>
+  <table><tr>{scale_cells}</tr></table>
+
+  <h2>План действий на 90 дней</h2>
+  <p style="margin:0 0 4px;">Три приоритета — оси с наименьшими оценками. По каждому: шаги, владелец и срок.</p>
+  {''.join(plan_blocks)}
+  <div class="diag" style="border-color:#059669;background:#05966911;">
+    <strong style="color:#059669;">Как измерять успех:</strong> по каждому шагу зафиксируйте метрику до старта
+    (число пилотов в проде, доля обученных сотрудников, доля утверждённого бюджета) и сверяйтесь ежемесячно.
+  </div>
+
+  <div class="cta">
+    <strong>Хотите обсудить результаты с экспертом?</strong><br/>
+    netbrainpower.ru — ИИ-стратегия, пилоты и трансформация с измеримым ROI.<br/>
+    <span class="muted">Поделитесь отчётом с коллегами — решение о трансформации принимается командой.</span>
+  </div>
+  <p class="muted" style="margin-top:6px;">
+    Отчёт подготовлен автоматически на основе предоставленных ответов и носит консультационный характер.
+    Методика разработана в рамках магистерской диссертации РАНХиГС. Конфиденциально.
+  </p>
+</div>
+
+</body></html>"""
+
     return HTML(string=html).write_pdf()
