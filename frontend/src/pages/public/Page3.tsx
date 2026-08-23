@@ -8,6 +8,63 @@ import { useAuditStore } from '@/store/auditStore';
 import { publicApi } from '@/services/api';
 import { REPORT_TYPES } from '@/types';
 
+const DIM_ORDER = ['1', '2', '3', '4', '5', '6', '7'];
+
+const DIM_NAMES: Record<string, string> = {
+  '1': 'Стратегия и управление',
+  '2': 'Люди и культура',
+  '3': 'Инфраструктура',
+  '4': 'Данные',
+  '5': 'Модели',
+  '6': 'Внедрение ИИ',
+  '7': 'Исследования (R&D)',
+};
+
+const bandPhrase = (s: number): string =>
+  s <= 1.8 ? 'начальный уровень: нет системного подхода' :
+  s <= 2.6 ? 'enabled: отдельные инициативы, но нет системы' :
+  s <= 3.4 ? 'driven: процессы стандартизированы' :
+  s <= 4.2 ? 'first: ИИ встроен в бизнес-процессы' :
+  'native: ИИ — ядро бизнес-модели';
+
+const ACTION_STEPS: Record<string, [string, string, string][]> = {
+  '1': [
+    ['Провести ИИ-стратегическую сессию с топ-менеджментом', 'CEO', '2 дня'],
+    ['Утвердить роадмап на 12 мес с 3 измеримыми целями', 'Стратег-блок', '30 дней'],
+    ['Закрепить ИИ-бюджет отдельной статьёй', 'CFO', '60 дней'],
+  ],
+  '2': [
+    ['Назначить AI-чемпионов в каждом подразделении', 'HRD', '30 дней'],
+    ['Запустить курс ИИ-грамотности для 20% сотрудников', 'L&D', '60 дней'],
+    ['Включить ИИ-инициативы в KPI руководителей', 'CEO', '90 дней'],
+  ],
+  '3': [
+    ['Провести аудит вычислительных ресурсов и облачных затрат', 'CTO', '30 дней'],
+    ['Развернуть dev-среду для ИИ-пилотов', 'CTO', '60 дней'],
+    ['Утвердить политику безопасности ИИ-инструментов', 'CISO', '90 дней'],
+  ],
+  '4': [
+    ['Определить топ-3 самых ценных дата-активов', 'CDO', '30 дней'],
+    ['Назначить владельцев данных и метрики качества', 'CDO', '60 дней'],
+    ['Построить пилотный пайплайн с мониторингом качества', 'Data Lead', '90 дней'],
+  ],
+  '5': [
+    ['Выбрать 2–3 use case с быстрым измеримым эффектом', 'AI Lead', '30 дней'],
+    ['Построить baseline-модель или выбрать vendor-решение', 'AI Lead', '60 дней'],
+    ['Настроить мониторинг точности и дрейфа', 'MLOps', '90 дней'],
+  ],
+  '6': [
+    ['Запустить 2–3 ИИ-пилота с бизнес-владельцами', 'Бизнес-владелец', '6–8 нед.'],
+    ['Определить критерии успеха пилотов в деньгах/времени', 'CEO', '30 дней'],
+    ['Внедрить ежемесячное ревью ИИ-инициатив', 'CEO', 'постоянно'],
+  ],
+  '7': [
+    ['Установить партнёрство с 1–2 университетами', 'R&D Lead', '60 дней'],
+    ['Подать заявку на 1 грант в квартал', 'R&D Lead', 'ежеквартально'],
+    ['Публиковать 1 кейс/статью в полугодие', 'R&D + Marketing', '6 мес'],
+  ],
+};
+
 export default function Page3() {
   const { auditId } = useParams<{ auditId: string }>();
   const navigate = useNavigate();
@@ -65,18 +122,6 @@ export default function Page3() {
       cancelled = true;
     };
   }, [auditId]);
-
-  const handleSendEmail = async () => {
-    if (!auditId) return;
-    const email = prompt('Введите ваш email для получения отчёта:');
-    if (!email) return;
-    try {
-      await publicApi.sendAuditReport(auditId, email);
-      alert('Отчёт отправлен на вашу почту!');
-    } catch (err) {
-      alert('Ошибка при отправке отчёта');
-    }
-  };
 
   const handleRestart = () => {
     if (confirm('Начать новую оценку? Текущие данные будут потеряны.')) {
@@ -148,6 +193,11 @@ export default function Page3() {
 
   const benchmarkScores = indices.benchmark_scores || undefined;
 
+  const planPriorities = DIM_ORDER
+    .map((id) => ({ id, score: Number(indices.dimension_scores?.[id] ?? 0) }))
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 3);
+
   const financialMetrics = indices.financial_metrics || {
     roi_percent: indices.roi_estimate_percent || 0,
     npv_millions: 0,
@@ -212,7 +262,58 @@ export default function Page3() {
                   </div>
                 </div>
               )}
+              {pattern && (
+                <div className={'rounded-lg border-2 p-3 ' + (patternSeverityColors[pattern.severity] || '')}>
+                  <div className="flex items-start gap-2">
+                    <div className="text-xl">{patternIcons[pattern.severity] || '📊'}</div>
+                    <div>
+                      <div className="font-bold mb-1">Диагноз: {pattern.diagnosis}</div>
+                      <p className="text-xs">{pattern.recommendation}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
+          </div>
+        </div>
+
+        {/* Анализ по 7 осям зрелости */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-3">📊 Анализ по 7 осям зрелости</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-gray-500 uppercase border-b border-gray-200">
+                  <th className="py-2 pr-2">Ось</th>
+                  <th className="py-2 pr-2">Балл</th>
+                  <th className="py-2 pr-2">Бенчмарк</th>
+                  <th className="py-2 pr-2">Разрыв</th>
+                  <th className="py-2">Интерпретация</th>
+                </tr>
+              </thead>
+              <tbody>
+                {DIM_ORDER.map((id) => {
+                  const s = Number(indices.dimension_scores?.[id] ?? 0);
+                  const b = benchmarkScores ? Number(benchmarkScores[id] ?? 0) : null;
+                  const gap = b !== null ? s - b : null;
+                  let interp = bandPhrase(s);
+                  if (gap !== null) {
+                    interp += gap < -0.4 ? '; ниже среднего по отрасли' : gap > 0.4 ? '; выше среднего по отрасли' : '; вблизи среднего';
+                  }
+                  return (
+                    <tr key={id} className="border-b border-gray-100">
+                      <td className="py-2 pr-2 font-medium text-gray-900">{DIM_NAMES[id]}</td>
+                      <td className="py-2 pr-2 font-bold text-gray-900">{s.toFixed(1)}</td>
+                      <td className="py-2 pr-2 text-gray-600">{b !== null ? b.toFixed(1) : '—'}</td>
+                      <td className={'py-2 pr-2 font-semibold ' + (gap !== null && gap < 0 ? 'text-red-600' : 'text-green-600')}>
+                        {gap !== null ? (gap > 0 ? '+' : '') + gap.toFixed(1) : '—'}
+                      </td>
+                      <td className="py-2 text-xs text-gray-600">{interp}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -247,19 +348,6 @@ export default function Page3() {
                     {financialMetrics.annual_benefit_millions?.toFixed(1) || '0'} млн ₽
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Pattern diagnosis */}
-        {pattern && (
-          <div className={'bg-white rounded-xl shadow-sm border-2 p-6 mb-6 ' + (patternSeverityColors[pattern.severity] || '')}>
-            <div className="flex items-start gap-3">
-              <div className="text-3xl">{patternIcons[pattern.severity] || '📊'}</div>
-              <div className="flex-1">
-                <h2 className="text-xl font-bold mb-2">Диагноз: {pattern.diagnosis}</h2>
-                <p className="text-sm">{pattern.recommendation}</p>
               </div>
             </div>
           </div>
@@ -328,31 +416,38 @@ export default function Page3() {
           </div>
         </div>
 
-        {/* Upsell triggers */}
-        {upsellTriggers.length > 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-bold text-yellow-900 mb-3">💼 Рекомендуемые услуги</h2>
-            <div className="space-y-3">
-              {upsellTriggers.map((trigger: any, i: number) => (
-                <div key={i} className="bg-white rounded-lg p-4 border border-yellow-200">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="font-bold text-gray-900">{trigger.service}</div>
-                    <div className="text-sm font-semibold text-blue-600">{trigger.price_hint}</div>
-                  </div>
-                  <p className="text-sm text-gray-700 mb-2">
-                    <strong className="text-red-600">Риск:</strong> {trigger.risk}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Ось «{trigger.dimension_name}» оценена на {trigger.score.toFixed(1)}/5
-                  </p>
+        {/* План действий на 90 дней (вместо рекомендуемых услуг) */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-1">🗓️ План действий на 90 дней</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Три приоритета — оси с наименьшими оценками. По каждому: конкретные шаги, владелец и срок.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {planPriorities.map((p, n) => (
+              <div key={p.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="font-bold text-gray-900 mb-2 text-sm">
+                  Приоритет {n + 1}: {DIM_NAMES[p.id]} ({p.score.toFixed(1)}/5)
                 </div>
-              ))}
-            </div>
+                <ol className="space-y-2 list-decimal list-inside">
+                  {(ACTION_STEPS[p.id] || []).map(([what, owner, term], i) => (
+                    <li key={i} className="text-xs text-gray-700">
+                      <strong>{what}</strong>
+                      <div className="text-gray-500">{owner} · {term}</div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ))}
           </div>
-        )}
+          <div className="mt-4 text-xs text-green-800 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+            <strong>Как измерять успех:</strong> по каждому шагу зафиксируйте метрику до старта
+            (число пилотов в проде, доля обученных сотрудников, доля утверждённого бюджета)
+            и сверяйтесь ежемесячно.
+          </div>
+        </div>
 
-        {/* Recommendations */}
-        {auditData?.recommendations && auditData.recommendations.length > 0 && (
+        {/* Recommendations (скрыто: дублирует план действий) */}
+        {false && auditData?.recommendations && auditData.recommendations.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">💡 Рекомендации</h2>
             <ul className="space-y-2">
@@ -371,29 +466,6 @@ export default function Page3() {
         {upsellTriggers.length > 0 && (
           <UpsellFunnel triggers={upsellTriggers} auditId={auditId} />
         )}
-
-        {/* CTA based on report type */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl shadow-sm p-6 mb-6 text-center">
-          <h3 className="text-lg font-bold text-blue-900 mb-2">
-            Следующий шаг: {selectedReport.cta}
-          </h3>
-          <p className="text-sm text-blue-700 mb-4">
-            {reportType === 'express' && 'Запишитесь на 30-минутный разбор результатов с экспертом'}
-            {reportType === 'executive' && 'Получите шаблон AI Governance Canvas для обоснования бюджета'}
-            {reportType === 'comprehensive' && 'Обсудите запуск Центра ИИ-компетенций в вашей компании'}
-          </p>
-          <button
-            disabled
-            onClick={handleSendEmail}
-            title="Функция в разработке"
-            className="inline-flex items-center justify-center px-8 py-3 rounded-lg text-base font-medium bg-gray-300 text-gray-500 cursor-not-allowed shadow-sm"
-          >
-            📧 Получить полный отчёт на email
-          </button>
-          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3 inline-block">
-            🔧 Отправка отчётов на email в разработке — станет доступна в следующем релизе
-          </p>
-        </div>
 
         {/* Action buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
