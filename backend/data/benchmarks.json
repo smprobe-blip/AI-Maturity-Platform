@@ -1,0 +1,199 @@
+{
+  "benchmarks": {
+    "Retail": {
+      "strategy": 3.0,
+      "people": 2.4,
+      "infrastructure": 2.8,
+      "data": 2.6,
+      "models": 2.2,
+      "implementation": 2.5,
+      "rnd": 1.4
+    },
+    "Finance": {
+      "strategy": 3.5,
+      "people": 3.0,
+      "infrastructure": 3.8,
+      "data": 4.0,
+      "models": 3.5,
+      "implementation": 3.2,
+      "rnd": 2.0
+    },
+    "Manufacturing": {
+      "strategy": 2.8,
+      "people": 2.2,
+      "infrastructure": 3.0,
+      "data": 2.4,
+      "models": 2.0,
+      "implementation": 2.6,
+      "rnd": 1.8
+    },
+    "IT": {
+      "strategy": 3.8,
+      "people": 3.5,
+      "infrastructure": 4.2,
+      "data": 4.0,
+      "models": 3.8,
+      "implementation": 3.5,
+      "rnd": 3.0
+    },
+    "Services": {
+      "strategy": 2.6,
+      "people": 2.8,
+      "infrastructure": 2.4,
+      "data": 2.2,
+      "models": 1.8,
+      "implementation": 2.4,
+      "rnd": 1.2
+    },
+    "Healthcare": {
+      "strategy": 3.0,
+      "people": 2.6,
+      "infrastructure": 3.2,
+      "data": 3.4,
+      "models": 2.8,
+      "implementation": 2.6,
+      "rnd": 2.2
+    },
+    "CrossIndustry": {
+      "strategy": 2.5,
+      "people": 2.5,
+      "infrastructure": 2.5,
+      "data": 2.5,
+      "models": 2.5,
+      "implementation": 2.5,
+      "rnd": 2.5
+    }
+  },
+  "subcriteria": {
+    "strategy": [
+      "AI Vision",
+      "Roadmap",
+      "Budget",
+      "KPIs",
+      "Governance"
+    ],
+    "people": [
+      "Skills",
+      "Training",
+      "Culture",
+      "Adoption",
+      "Retention"
+    ],
+    "infrastructure": [
+      "Cloud",
+      "Tools",
+      "Integration",
+      "Security",
+      "Scalability"
+    ],
+    "data": [
+      "Quality",
+      "Availability",
+      "Governance",
+      "Pipeline",
+      "Storage"
+    ],
+    "models": [
+      "Development",
+      "Testing",
+      "Deployment",
+      "Monitoring",
+      "MLOps"
+    ],
+    "implementation": [
+      "Pilots",
+      "Scale",
+      "ROI",
+      "Change Mgmt",
+      "Success Stories"
+    ],
+    "rnd": [
+      "Patents",
+      "POCs",
+      "Experiments",
+      "Partnerships",
+      "Publications"
+    ]
+  },
+  "axes": [
+    {
+      "key": "strategy",
+      "label": "Стратегия и управление",
+      "weight": 0.15,
+      "position": "12:00"
+    },
+    {
+      "key": "people",
+      "label": "Люди и культура",
+      "weight": 0.15,
+      "position": "01:45"
+    },
+    {
+      "key": "infrastructure",
+      "label": "Инфраструктура",
+      "weight": 0.15,
+      "position": "03:30"
+    },
+    {
+      "key": "data",
+      "label": "Данные",
+      "weight": 0.15,
+      "position": "05:15"
+    },
+    {
+      "key": "models",
+      "label": "Модели",
+      "weight": 0.15,
+      "position": "06:45"
+    },
+    {
+      "key": "implementation",
+      "label": "Внедрение ИИ",
+      "weight": 0.2,
+      "position": "08:30"
+    },
+    {
+      "key": "rnd",
+      "label": "Исследования (R&D)",
+      "weight": 0.05,
+      "position": "10:15"
+    }
+  ],
+  "maturity_zones": [
+    {
+      "min": 1.0,
+      "max": 1.8,
+      "level": "Начальный",
+      "color": "#FEE2E2",
+      "colorDark": "#7F1D1D"
+    },
+    {
+      "min": 1.9,
+      "max": 2.6,
+      "level": "AI-Enabled",
+      "color": "#FEF3C7",
+      "colorDark": "#78350F"
+    },
+    {
+      "min": 2.7,
+      "max": 3.4,
+      "level": "AI-Driven",
+      "color": "#DCFCE7",
+      "colorDark": "#14532D"
+    },
+    {
+      "min": 3.5,
+      "max": 4.2,
+      "level": "AI-First",
+      "color": "#DBEAFE",
+      "colorDark": "#1E3A8A"
+    },
+    {
+      "min": 4.3,
+      "max": 5.0,
+      "level": "AI-Native",
+      "color": "#EDE9FE",
+      "colorDark": "#4C1D95"
+    }
+  ]
+}
