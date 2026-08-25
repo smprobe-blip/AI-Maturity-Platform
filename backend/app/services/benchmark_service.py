@@ -20,7 +20,7 @@ BENCHMARK_KEY_TO_DIM_ID = {
 INDUSTRY_KEY_MAP = {
     'retail': 'Retail', 'ecommerce': 'Retail', 'finance': 'Finance',
     'fintech': 'Finance', 'manufacturing': 'Manufacturing', 'it': 'IT',
-    'telecom': 'Services', 'logistics': 'Services', 'energy': 'Services',
+    'telecom': 'Services', 'logistics': 'Services', 'energy': 'Services', 'construction': 'Manufacturing',
     'healthcare': 'Healthcare', 'education': 'Services',
     'government': 'Services', 'other': 'CrossIndustry',
 }

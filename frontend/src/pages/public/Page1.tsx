@@ -20,6 +20,7 @@ const INDUSTRIES = [
   { value: 'it', label: 'IT / Технологии' },
   { value: 'logistics', label: 'Логистика' },
   { value: 'energy', label: 'Энергетика' },
+  { value: 'construction', label: 'Строительство / Девелопмент' },
   { value: 'healthcare', label: 'Здравоохранение' },
   { value: 'education', label: 'Образование' },
   { value: 'government', label: 'Госсектор' },

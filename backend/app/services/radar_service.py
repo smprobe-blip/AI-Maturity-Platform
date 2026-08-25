@@ -75,7 +75,7 @@ INDUSTRY_KEY_MAP = {
     'it': 'IT',
     'telecom': 'Services',
     'logistics': 'Services',
-    'energy': 'Services',
+    'energy': 'Services', 'construction': 'Manufacturing',
     'healthcare': 'Healthcare',
     'education': 'Services',
     'government': 'Services',

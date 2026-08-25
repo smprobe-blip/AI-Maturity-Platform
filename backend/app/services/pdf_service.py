@@ -35,7 +35,7 @@ INDUSTRY_MAP = {
     'healthcare': 'Healthcare', 'education': 'Education',
     'government': 'Госсектор', 'other': 'Другое', 'crossindustry': 'Кросс-отраслевой',
     'ecommerce': 'E-commerce', 'fintech': 'Финтех', 'telecom': 'Телеком',
-    'logistics': 'Логистика', 'energy': 'Энергетика',
+    'logistics': 'Логистика', 'energy': 'Энергетика', 'construction': 'Строительство / Девелопмент',
 }
 
 ACTION_STEPS = {
