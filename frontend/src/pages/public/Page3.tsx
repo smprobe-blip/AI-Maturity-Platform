@@ -7,6 +7,7 @@ import { UpsellFunnel } from '@/components/UpsellFunnel';
 import { useAuditStore } from '@/store/auditStore';
 import { publicApi } from '@/services/api';
 import { REPORT_TYPES } from '@/types';
+import { PublicChrome } from '@/components/layout/PublicChrome';
 
 const DIM_ORDER = ['1', '2', '3', '4', '5', '6', '7'];
 
@@ -132,35 +133,41 @@ export default function Page3() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <PublicChrome>
+        <div className="flex items-center justify-center py-16">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Загрузка результатов...</p>
         </div>
       </div>
+        </PublicChrome>
     );
   }
 
   if (error && !calculatedIndices && !auditData) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <PublicChrome>
+        <div className="flex items-center justify-center py-16">
         <div className="text-center">
           <div className="text-red-600 text-xl mb-4">{error}</div>
           <Button onClick={() => navigate('/')}>На главную</Button>
         </div>
       </div>
+        </PublicChrome>
     );
   }
 
   const indices = auditData?.calculated_indices || calculatedIndices;
   if (!indices) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <PublicChrome>
+        <div className="flex items-center justify-center py-16">
         <div className="text-center">
           <div className="text-gray-600 mb-4">Нет данных для отображения</div>
           <Button onClick={() => navigate('/')}>Начать оценку</Button>
         </div>
       </div>
+        </PublicChrome>
     );
   }
 
@@ -176,13 +183,6 @@ export default function Page3() {
     warning: 'bg-yellow-50 border-yellow-300 text-yellow-900',
     info: 'bg-blue-50 border-blue-300 text-blue-900',
     success: 'bg-green-50 border-green-300 text-green-900',
-  };
-
-  const patternIcons: Record<string, string> = {
-    critical: '🚨',
-    warning: '⚠️',
-    info: 'ℹ️',
-    success: '✅',
   };
 
   const targetScores = indices.gap_analysis
@@ -206,7 +206,8 @@ export default function Page3() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-8 px-4">
+    <PublicChrome>
+      <div className="py-8 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
@@ -223,12 +224,13 @@ export default function Page3() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Radar Chart — легенда внутри SVG (в левом верхнем углу) */}
             <div>
-              <h2 className="text-lg font-bold text-gray-900 mb-3">🎯 Радар зрелости</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-3">Радар зрелости</h2>
               <RadarChart
                 dimensionScores={indices.dimension_scores}
                 targetScores={targetScores}
                 benchmarkScores={benchmarkScores}
                 showGap={!!indices.gap_analysis}
+                theme="brand"
               />
             </div>
 
@@ -236,19 +238,19 @@ export default function Page3() {
             <div className="space-y-4">
               <div>
                 <div className="text-sm text-gray-600 mb-1">Комплексная оценка</div>
-                <div className="text-5xl font-bold text-blue-600">
+                <div className="text-5xl font-bold text-primary-600 nbp-mono">
                   {indices.composite_score.toFixed(2)}
                   <span className="text-2xl text-gray-400"> / 5.00</span>
                 </div>
               </div>
               <div>
                 <div className="text-sm text-gray-600 mb-1">Уровень зрелости</div>
-                <div className="text-2xl font-bold text-gray-900">{indices.maturity_level}</div>
+                <div className="text-2xl font-bold text-gray-900 nbp-mono">{indices.maturity_level}</div>
               </div>
               {indices.roi_estimate_percent !== undefined && indices.roi_estimate_percent !== null && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <div className="text-sm text-gray-600 mb-1">Потенциал роста ROI</div>
-                  <div className="text-3xl font-bold text-green-600">
+                  <div className="text-3xl font-bold text-green-600 nbp-mono">
                     +{indices.roi_estimate_percent.toFixed(0)}%
                   </div>
                   <div className="text-xs text-gray-500">при достижении целевого состояния</div>
@@ -257,19 +259,16 @@ export default function Page3() {
               {indices.tco_estimate_millions !== undefined && indices.tco_estimate_millions !== null && (
                 <div>
                   <div className="text-sm text-gray-600 mb-1">Оценка TCO</div>
-                  <div className="text-2xl font-bold text-gray-900">
+                  <div className="text-2xl font-bold text-gray-900 nbp-mono">
                     {indices.tco_estimate_millions.toFixed(1)} млн ₽
                   </div>
                 </div>
               )}
               {pattern && (
                 <div className={'rounded-lg border-2 p-3 ' + (patternSeverityColors[pattern.severity] || '')}>
-                  <div className="flex items-start gap-2">
-                    <div className="text-xl">{patternIcons[pattern.severity] || '📊'}</div>
-                    <div>
-                      <div className="font-bold mb-1">Диагноз: {pattern.diagnosis}</div>
-                      <p className="text-xs">{pattern.recommendation}</p>
-                    </div>
+                  <div>
+                    <div className="font-bold mb-1">Диагноз: {pattern.diagnosis}</div>
+                    <p className="text-xs">{pattern.recommendation}</p>
                   </div>
                 </div>
               )}
@@ -279,7 +278,7 @@ export default function Page3() {
 
         {/* Анализ по 7 осям зрелости */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-3">📊 Анализ по 7 осям зрелости</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-3">Анализ по 7 осям зрелости</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -303,7 +302,7 @@ export default function Page3() {
                   return (
                     <tr key={id} className="border-b border-gray-100">
                       <td className="py-2 pr-2 font-medium text-gray-900">{DIM_NAMES[id]}</td>
-                      <td className="py-2 pr-2 font-bold text-gray-900">{s.toFixed(1)}</td>
+                      <td className="py-2 pr-2 font-bold text-gray-900 nbp-mono">{s.toFixed(1)}</td>
                       <td className="py-2 pr-2 text-gray-600">{b !== null ? b.toFixed(1) : '—'}</td>
                       <td className={'py-2 pr-2 font-semibold ' + (gap !== null && gap < 0 ? 'text-red-600' : 'text-green-600')}>
                         {gap !== null ? (gap > 0 ? '+' : '') + gap.toFixed(1) : '—'}
@@ -320,7 +319,7 @@ export default function Page3() {
         {/* Financial Speedometer */}
         {(financialMetrics.npv_millions > 0 || financialMetrics.payback_months > 0) && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-3"> Финансовый потенциал</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-3">Финансовый потенциал</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Speedometer
                 roiPercent={financialMetrics.roi_percent}
@@ -331,14 +330,14 @@ export default function Page3() {
               <div className="space-y-4">
                 <div>
                   <div className="text-sm text-gray-600 mb-1">Чистая приведённая стоимость (NPV)</div>
-                  <div className="text-3xl font-bold text-green-600">
+                  <div className="text-3xl font-bold text-green-600 nbp-mono">
                     +{financialMetrics.npv_millions.toFixed(1)} млн ₽
                   </div>
                   <div className="text-xs text-gray-500">за 3 года (ставка дисконтирования 15%)</div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-600 mb-1">Срок окупаемости</div>
-                  <div className="text-2xl font-bold text-gray-900">
+                  <div className="text-2xl font-bold text-gray-900 nbp-mono">
                     {financialMetrics.payback_months} месяцев
                   </div>
                 </div>
@@ -357,7 +356,6 @@ export default function Page3() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <span className="text-red-600">🔻</span>
               Топ-3 горлышка
             </h2>
             <div className="space-y-2">
@@ -387,7 +385,6 @@ export default function Page3() {
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <span className="text-green-600">🔺</span>
               Топ-3 якоря
             </h2>
             <div className="space-y-2">
@@ -418,7 +415,7 @@ export default function Page3() {
 
         {/* План действий на 90 дней (вместо рекомендуемых услуг) */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-1">🗓️ План действий на 90 дней</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-1">План действий на 90 дней</h2>
           <p className="text-sm text-gray-600 mb-4">
             Три приоритета — оси с наименьшими оценками. По каждому: конкретные шаги, владелец и срок.
           </p>
@@ -449,7 +446,7 @@ export default function Page3() {
         {/* Recommendations (скрыто: дублирует план действий) */}
         {false && auditData?.recommendations && auditData.recommendations.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">💡 Рекомендации</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Рекомендации</h2>
             <ul className="space-y-2">
               {auditData.recommendations.map((r: string, i: number) => (
                 <li key={i} className="flex gap-2 text-gray-700">
@@ -475,17 +472,18 @@ export default function Page3() {
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-red-600 hover:bg-red-700 shadow-sm transition-colors"
           >
-            📄 Скачать PDF-отчёт
+            Скачать PDF-отчёт
           </a>
           <Button onClick={handleRestart} variant="secondary">
-            🔄 Начать заново
+            Начать заново
           </Button>
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-6">
-          ✨ Спасибо за участие! Ваши данные анонимизированы и используются только для бенчмаркинга.
+          Спасибо за участие! Ваши данные анонимизированы и используются только для бенчмаркинга.
         </p>
       </div>
-    </div>
+      </div>
+    </PublicChrome>
   );
 }

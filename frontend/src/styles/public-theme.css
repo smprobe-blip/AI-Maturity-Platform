@@ -12,6 +12,9 @@
 .nbp-mono {
   font-family: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
 }
+.nbp-pub .font-mono {
+  font-family: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+}
 
 /* --- Перекраска primary-утилит внутри скоупа --- */
 .nbp-pub .bg-primary-600 { background-color: #0d6b4f; }

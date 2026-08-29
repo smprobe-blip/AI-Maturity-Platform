@@ -7,6 +7,7 @@ interface RadarChartProps {
   benchmarkScores?: Record<string, number>;
   maxValue?: number;
   showGap?: boolean;
+  theme?: 'default' | 'brand';
 }
 
 const DIMENSION_LABELS: Record<string, string> = {
@@ -35,8 +36,34 @@ export function RadarChart({
   benchmarkScores,
   maxValue = 5,
   showGap = true,
+  theme = 'default',
 }: RadarChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+
+  // Палитры: default = синяя (админка), brand = стиль лендинга «Аудит»
+  const pal = theme === 'brand' ? {
+    axis: '#c6cbc2',
+    text: '#15181b',
+    legendText: '#565d63',
+    criticalPulse: '#b42318',
+    benchmark: '#a8ada4',
+    target: '#0d6b4f',
+    gap: '#b42318',
+    currentFill: 'rgba(21, 24, 27, 0.10)',
+    currentStroke: '#23282d',
+    bestDot: '#0d6b4f',
+  } : {
+    axis: '#9CA3AF',
+    text: '#1F2937',
+    legendText: '#374151',
+    criticalPulse: '#EF4444',
+    benchmark: '#9CA3AF',
+    target: '#10B981',
+    gap: '#EF4444',
+    currentFill: 'rgba(59, 130, 246, 0.25)',
+    currentStroke: '#2563eb',
+    bestDot: '#2563eb',
+  };
 
   useEffect(() => {
     if (!svgRef.current) return;
@@ -74,7 +101,7 @@ export function RadarChart({
       g.append('line')
         .attr('x1', 0).attr('y1', 0)
         .attr('x2', x).attr('y2', y)
-        .attr('stroke', '#9CA3AF')
+        .attr('stroke', pal.axis)
         .attr('stroke-width', 1);
 
       const labelX = Math.cos(angle) * (radius + 35);
@@ -87,7 +114,7 @@ export function RadarChart({
         .attr('dominant-baseline', 'middle')
         .attr('font-size', '12px')
         .attr('font-weight', '600')
-        .attr('fill', '#1F2937')
+        .attr('fill', pal.text)
         .text(DIMENSION_LABELS[axis] || axis);
 
       // Pulsing animation for critical axes (score <= 1.8)
@@ -100,7 +127,7 @@ export function RadarChart({
           .attr('cx', pointX)
           .attr('cy', pointY)
           .attr('r', 6)
-          .attr('fill', '#EF4444')
+          .attr('fill', pal.criticalPulse)
           .attr('opacity', 0.8);
         
         pulseCircle.append('animate')
@@ -124,7 +151,7 @@ export function RadarChart({
         .datum(benchPoints)
         .attr('d', d3.line().curve(d3.curveLinearClosed) as any)
         .attr('fill', 'none')
-        .attr('stroke', '#9CA3AF')
+        .attr('stroke', pal.benchmark)
         .attr('stroke-width', 1.5)
         .attr('stroke-dasharray', '5,5');
 
@@ -132,7 +159,7 @@ export function RadarChart({
         g.append('path')
           .attr('d', d3.symbol().type(d3.symbolDiamond).size(40) as any)
           .attr('transform', `translate(${x},${y})`)
-          .attr('fill', '#9CA3AF');
+          .attr('fill', pal.benchmark);
       });
     }
 
@@ -149,7 +176,7 @@ export function RadarChart({
         .datum(targetPoints)
         .attr('d', d3.line().curve(d3.curveLinearClosed) as any)
         .attr('fill', 'none')
-        .attr('stroke', '#10B981')
+        .attr('stroke', pal.target)
         .attr('stroke-width', 2)
         .attr('stroke-dasharray', '4,4');
     }
@@ -173,7 +200,7 @@ export function RadarChart({
           g.append('line')
             .attr('x1', x1).attr('y1', y1)
             .attr('x2', x2).attr('y2', y2)
-            .attr('stroke', '#EF4444')
+            .attr('stroke', pal.gap)
             .attr('stroke-width', 2)
             .attr('stroke-dasharray', '2,2')
             .attr('opacity', 0.6);
@@ -192,8 +219,8 @@ export function RadarChart({
     g.append('path')
       .datum(currentPoints)
       .attr('d', d3.line().curve(d3.curveLinearClosed) as any)
-      .attr('fill', 'rgba(59, 130, 246, 0.25)')
-      .attr('stroke', '#2563eb')
+      .attr('fill', pal.currentFill)
+      .attr('stroke', pal.currentStroke)
       .attr('stroke-width', 2.5);
 
     currentPoints.forEach(([x, y], i) => {
@@ -203,7 +230,7 @@ export function RadarChart({
       const color = score <= 1.8 ? '#EF4444' 
                  : score <= 2.6 ? '#F59E0B' 
                  : score <= 3.4 ? '#10B981' 
-                 : '#2563eb';
+                 : pal.bestDot;
 
       g.append('circle')
         .attr('cx', x).attr('cy', y)
@@ -218,9 +245,9 @@ export function RadarChart({
       .attr('transform', `translate(${-width/2 + 15}, ${-height/2 + 45})`);
 
     const legendItems = [
-      { label: 'Текущее', color: '#2563eb', dash: '' },
-      { label: 'Целевое', color: '#10B981', dash: '4,4' },
-      { label: 'Бенчмарк', color: '#9CA3AF', dash: '5,5' },
+      { label: 'Текущее', color: pal.currentStroke, dash: '' },
+      { label: 'Целевое', color: pal.target, dash: '4,4' },
+      { label: 'Бенчмарк', color: pal.benchmark, dash: '5,5' },
     ];
 
     legendItems.forEach((item, i) => {
@@ -236,7 +263,7 @@ export function RadarChart({
         .attr('x', 26).attr('y', y)
         .attr('dominant-baseline', 'middle')
         .attr('font-size', '12px')
-        .attr('fill', '#374151')
+        .attr('fill', pal.legendText)
         .text(item.label);
     });
 
@@ -287,7 +314,7 @@ export function RadarChart({
         .attr('text-anchor', 'middle')
         .attr('font-size', '11px')
         .attr('font-weight', '700')
-        .attr('fill', '#111827')
+        .attr('fill', pal.text)
         .text(zone.label);
         
       // Score range
@@ -296,11 +323,11 @@ export function RadarChart({
         .attr('y', 42)
         .attr('text-anchor', 'middle')
         .attr('font-size', '10px')
-        .attr('fill', '#6B7280')
+        .attr('fill', pal.legendText)
         .text(`${zone.min.toFixed(1)}-${zone.max.toFixed(1)}`);
     });
 
-  }, [dimensionScores, targetScores, benchmarkScores, maxValue, showGap]);
+  }, [dimensionScores, targetScores, benchmarkScores, maxValue, showGap, theme]);
 
   return <svg ref={svgRef} className="w-full max-w-lg mx-auto" />;
 }
