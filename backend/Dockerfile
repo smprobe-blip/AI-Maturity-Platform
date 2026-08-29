@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     fonts-dejavu-core \
     fonts-dejavu-extra \
+    fontconfig \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
     libpangocairo-1.0-0 \
@@ -24,6 +25,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
+
+# Install IBM Plex fonts for PDF reports (WeasyPrint / fontconfig)
+RUN mkdir -p /usr/share/fonts/truetype/ibmplex \
+    && cp /app/app/assets/fonts/*.ttf /usr/share/fonts/truetype/ibmplex/ \
+    && fc-cache -f
 
 # Create data directories
 RUN mkdir -p /data_storage/raw_audits \
