@@ -18,6 +18,7 @@ from app.services.benchmark_service import benchmark_service
 from app.services.pattern_service import (
     detect_pattern,
     generate_upsell_triggers,
+    get_pattern_focus_axes,
     get_top3_anchors,
     get_top3_bottlenecks,
     DIMENSIONS,
@@ -223,35 +224,36 @@ def generate_recommendations(
     dimension_scores: Dict[str, float],
     top3_bottlenecks: List[Any],
     top3_anchors: List[Any],
+    pattern: Optional[PatternInfo] = None,
 ) -> List[str]:
-    """Generate actionable recommendations."""
-    recommendations = []
-    
+    """Generate actionable recommendations.
+    Паттерн определяет порядок: рекомендации по осям фокуса паттерна идут первыми."""
+    focus = get_pattern_focus_axes(pattern, dimension_scores) if pattern else []
+    items = []
+
     for item in top3_bottlenecks:
         severity = _get_field(item, 'severity')
+        dim_id = str(_get_field(item, 'dimension_id', ''))
         dim_name = _get_field(item, 'dimension_name', '')
         score = _get_field(item, 'score', 0)
-        
         if severity == 'critical':
-            recommendations.append(
-                f"Критическая зона: {dim_name} ({score:.1f}/5). Требуется срочное внимание и инвестиции."
-            )
+            items.append((0 if dim_id in focus else 1, 0, score, dim_id,
+                f"Критическая зона: {dim_name} ({score:.1f}/5). Требуется срочное внимание и инвестиции."))
         elif severity == 'warning':
-            recommendations.append(
-                f"Зона роста: {dim_name} ({score:.1f}/5). Рекомендуется развитие компетенций."
-            )
-    
+            items.append((0 if dim_id in focus else 1, 1, score, dim_id,
+                f"Зона роста: {dim_name} ({score:.1f}/5). Рекомендуется развитие компетенций."))
+
     for item in top3_anchors:
         strength = _get_field(item, 'strength')
+        dim_id = str(_get_field(item, 'dimension_id', ''))
         dim_name = _get_field(item, 'dimension_name', '')
         score = _get_field(item, 'score', 0)
-        
         if strength == 'strong':
-            recommendations.append(
-                f"Опорная точка: {dim_name} ({score:.1f}/5). Использовать как якорь изменений."
-            )
-    
-    return recommendations
+            items.append((0 if dim_id in focus else 1, 2, -score, dim_id,
+                f"Опорная точка: {dim_name} ({score:.1f}/5). Использовать как якорь изменений."))
+
+    items.sort(key=lambda t: (t[0], t[1], t[2]))
+    return [t[4] for t in items]
 
 
 # ============================================================

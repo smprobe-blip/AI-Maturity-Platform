@@ -59,6 +59,7 @@ class AuditService:
             indices.dimension_scores,
             indices.top3_bottlenecks,
             indices.top3_anchors,
+            pattern=indices.pattern,
         )
 
         # 3. Build company profile

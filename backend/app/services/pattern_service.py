@@ -29,6 +29,34 @@ DIMENSIONS = {
 }
 
 
+# Оси фокуса: рекомендации по этим осям паттерн продвигает в начало списка.
+PATTERN_FOCUS: Dict[str, List[str]] = {
+    'compressed_circle': ['1', '3'],
+    'people_anchor': ['2'],
+    'right_skew': ['2'],
+    'left_skew': ['6'],
+    'benchmark_parity': ['7'],
+    'star_with_gaps': [],
+    'single_anchor': [],
+    'balanced': [],
+}
+
+
+def get_pattern_focus_axes(
+    pattern: Optional[PatternInfo],
+    dimension_scores: Optional[Dict[str, float]] = None,
+) -> List[str]:
+    """Оси, которые паттерн продвигает в начало рекомендаций."""
+    if not pattern:
+        return []
+    ptype = pattern.pattern_type
+    if ptype == 'star_with_gaps' and dimension_scores:
+        return [k for k, v in dimension_scores.items() if v <= 2.0][:2]
+    if ptype == 'single_anchor' and dimension_scores:
+        return [max(dimension_scores, key=lambda k: dimension_scores[k])]
+    return list(PATTERN_FOCUS.get(ptype, []))
+
+
 def _avg(scores: List[float]) -> float:
     return sum(scores) / len(scores) if scores else 0.0
 
@@ -195,7 +223,8 @@ def generate_upsell_triggers(
     triggers = []
     
     # Сортируем оси по оценке (от худшей к лучшей)
-    sorted_dims = sorted(dimension_scores.items(), key=lambda x: x[1])
+    focus = get_pattern_focus_axes(pattern, dimension_scores)
+    sorted_dims = sorted(dimension_scores.items(), key=lambda kv: (0 if kv[0] in focus else 1, kv[1]))
     
     # Берем только те, где оценка < 3.5 (зоны роста)
     for dim_id, score in sorted_dims:
