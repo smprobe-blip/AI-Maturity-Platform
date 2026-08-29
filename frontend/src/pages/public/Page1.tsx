@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { useAuditStore } from '@/store/auditStore';
 import { REPORT_TYPES } from '@/types';
+import { PublicChrome } from '@/components/layout/PublicChrome';
 
 const INDUSTRIES = [
   { value: 'retail', label: 'Ритейл' },
@@ -77,22 +78,14 @@ export default function Page1() {
   const selectedReport = REPORT_TYPES.find((r) => r.value === reportType)!;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 py-12 px-4">
+    <PublicChrome>
+      <div className="py-12 px-4">
       <div className="max-w-3xl mx-auto">
-        {/* Mini header: ссылка на основной сайт */}
-        <div className="text-center mb-4">
-          <a 
-            href="https://netbrainpower.ru" 
-            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-primary-600 font-medium transition-colors"
-          >
-            🎯 NetBrainPower
-          </a>
-        </div>
 
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-3">
-            🤖 Оценка ИИ-зрелости
+            Оценка ИИ-зрелости
           </h1>
           <p className="text-lg text-gray-600">
             Диагностика по <strong>35 критериям</strong> (7 осей × 5 вопросов).
@@ -173,7 +166,7 @@ export default function Page1() {
               />
               <div className="text-sm">
                 <div className="font-medium text-blue-900">
-                  🎓 Согласие на участие в научном исследовании
+                  Согласие на участие в научном исследовании
                 </div>
                 <div className="text-blue-800 mt-1">
                   Ваши <strong>обезличенные</strong> ответы будут использованы в магистерской диссертации
@@ -228,7 +221,7 @@ export default function Page1() {
                     </p>
                     {isDisabled ? (
                       <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                        🔧 В разработке
+                        В разработке
                       </span>
                     ) : (
                       <div className="text-sm font-semibold text-primary-600">
@@ -270,7 +263,7 @@ export default function Page1() {
 
           {/* Privacy info */}
           <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 text-sm text-gray-700">
-            <p className="font-medium mb-1">🔒 Конфиденциальность</p>
+            <p className="font-medium mb-1">Конфиденциальность</p>
             <p>
               Все данные анонимизируются. Результаты хранятся на территории РФ
               (Yandex Cloud, 152-ФЗ). Мы используем их только для отраслевых бенчмарков.
@@ -288,6 +281,7 @@ export default function Page1() {
           </p>
         </form>
       </div>
-    </div>
+      </div>
+    </PublicChrome>
   );
 }

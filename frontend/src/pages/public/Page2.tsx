@@ -5,6 +5,7 @@ import { QuestionHint } from '@/components/QuestionHint';
 import { useAuditStore } from '@/store/auditStore';
 import { publicApi } from '@/services/api';
 import { DIMENSIONS } from '@/types';
+import { PublicChrome } from '@/components/layout/PublicChrome';
 
 export default function Page2() {
   const navigate = useNavigate();
@@ -103,7 +104,8 @@ export default function Page2() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 py-8 px-4">
+    <PublicChrome>
+      <div className="py-8 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -150,7 +152,7 @@ export default function Page2() {
                 <div className="text-xs font-bold text-gray-500 mb-1">
                   {dim.id}. {dim.shortName}
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-2xl font-bold text-gray-900 nbp-mono">
                   {score > 0 ? score.toFixed(1) : '—'}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
@@ -191,6 +193,10 @@ export default function Page2() {
                     </Button>
                   </div>
 
+                  <div className="nbp-hint-note mb-4">
+                    Нажимайте на «?» рядом с вопросом: там пояснение, почему это важно и описание всех 5 уровней.
+                  </div>
+
                   <div className="space-y-5">
                     {dim.questions.map((q) => {
                       const currentValue = responses[dim.id]?.[q.id] ?? 0;
@@ -209,7 +215,7 @@ export default function Page2() {
                                 <QuestionHint hint={hint} />
                               </div>
                             </div>
-                            <div className="text-2xl font-bold text-primary-600 min-w-[3rem] text-right">
+                            <div className="text-2xl font-bold text-primary-600 min-w-[3rem] text-right nbp-mono">
                               {currentValue > 0 ? currentValue.toFixed(1) : '—'}
                             </div>
                           </div>
@@ -332,6 +338,7 @@ export default function Page2() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </PublicChrome>
   );
 }

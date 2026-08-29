@@ -1,0 +1,90 @@
+/*
+ * Публичные страницы оценки (Page1/Page2) — стиль лендинга «Аудит».
+ * Скоуп .nbp-pub: админка не затронута (там primary остаётся синим).
+ * Палитра: бумага #f4f4f1 / чернила #15181b / акцент #0d6b4f.
+ */
+.nbp-pub {
+  background-color: #f4f4f1;
+  color: #15181b;
+  font-family: 'IBM Plex Sans', 'Inter', -apple-system, 'Segoe UI', sans-serif;
+  line-height: 1.6;
+}
+.nbp-mono {
+  font-family: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+}
+
+/* --- Перекраска primary-утилит внутри скоупа --- */
+.nbp-pub .bg-primary-600 { background-color: #0d6b4f; }
+.nbp-pub .hover\:bg-primary-700:hover { background-color: #0a5640; }
+.nbp-pub .active\:bg-primary-800:active { background-color: #0a3d2e; }
+.nbp-pub .text-primary-600 { color: #0d6b4f; }
+.nbp-pub .text-primary-900 { color: #0a3d2e; }
+.nbp-pub .border-primary-600 { border-color: #0d6b4f; }
+.nbp-pub .border-primary-500 { border-color: #0d6b4f; }
+.nbp-pub .border-primary-300 { border-color: #9dbfac; }
+.nbp-pub .bg-primary-50 { background-color: #e6efe9; }
+.nbp-pub .hover\:bg-primary-50:hover { background-color: #e6efe9; }
+.nbp-pub .hover\:border-primary-300:hover { border-color: #0d6b4f; }
+.nbp-pub .accent-primary-600 { accent-color: #0d6b4f; }
+.nbp-pub .accent-green-600 { accent-color: #0a5640; }
+.nbp-pub .text-green-600 { color: #0a5640; }
+.nbp-pub .text-green-700 { color: #0a5640; }
+.nbp-pub .focus\:ring-primary-500:focus { --tw-ring-color: #0d6b4f; }
+
+/* --- Радиусы в духе лендинга --- */
+.nbp-pub .rounded-lg { border-radius: 3px; }
+.nbp-pub .rounded-xl { border-radius: 4px; }
+.nbp-pub .card { border-radius: 4px; }
+
+/* --- Шапка --- */
+.nbp-header {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 20px; flex-wrap: wrap;
+  padding: 16px 28px;
+  border-bottom: 1px solid #dcded6;
+}
+.nbp-logo {
+  font-size: 21px; font-weight: 700; letter-spacing: -0.02em;
+  color: #15181b; text-decoration: none; white-space: nowrap;
+}
+.nbp-logo em { font-style: normal; color: #0d6b4f; }
+.nbp-nav { display: flex; gap: 28px; align-items: center; }
+.nbp-nav a { color: #565d63; text-decoration: none; font-size: 15px; font-weight: 500; }
+.nbp-nav a:hover { color: #0d6b4f; }
+.nbp-pill {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px; font-weight: 600; line-height: 1.3;
+  color: #0a5640; background: #e6efe9; border: 1px solid #9dbfac;
+  border-radius: 3px; padding: 7px 14px; white-space: nowrap;
+}
+
+/* --- Подвал --- */
+.nbp-footer {
+  border-top: 1px solid #dcded6;
+  padding: 20px 28px 32px;
+  display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  color: #565d63; font-size: 14px;
+}
+
+/* --- Подсказка «?» и её панель --- */
+.nbp-hint-note {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12.5px; line-height: 1.5;
+  color: #0a5640; background: #e6efe9;
+  border: 1px solid #9dbfac; border-radius: 3px;
+  padding: 10px 14px;
+}
+.nbp-pub button[aria-label='Показать подсказку'] {
+  color: #0d6b4f; background: #e6efe9;
+  border-radius: 3px; padding: 2px 3px;
+}
+.nbp-pub button[aria-label='Показать подсказку']:hover { background: #d5e5db; }
+
+/* --- Адаптив шапки --- */
+@media (max-width: 720px) {
+  .nbp-header { padding: 14px 16px; }
+  .nbp-nav { gap: 18px; }
+  .nbp-nav a { font-size: 14px; }
+  .nbp-pill { display: none; }
+  .nbp-footer { padding: 18px 16px 28px; }
+}
