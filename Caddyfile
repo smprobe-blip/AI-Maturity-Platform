@@ -3,6 +3,11 @@
 }
 
 audit.netbrainpower.ru {
+    # Keycloak (авторизация админки) — под путём /auth
+    handle /auth/* {
+        reverse_proxy keycloak:8080
+    }
+
     # API — напрямую на backend (путь сохраняется как есть)
     handle /api/* {
         reverse_proxy backend:8000

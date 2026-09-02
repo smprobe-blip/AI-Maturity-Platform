@@ -12,6 +12,14 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Keycloak: публичный URL для SPA (передаётся через build args prod-compose)
+ARG VITE_KEYCLOAK_URL
+ARG VITE_KEYCLOAK_REALM
+ARG VITE_KEYCLOAK_CLIENT_ID
+ENV VITE_KEYCLOAK_URL=$VITE_KEYCLOAK_URL \
+    VITE_KEYCLOAK_REALM=$VITE_KEYCLOAK_REALM \
+    VITE_KEYCLOAK_CLIENT_ID=$VITE_KEYCLOAK_CLIENT_ID
+
 # Build application
 RUN npm run build
 

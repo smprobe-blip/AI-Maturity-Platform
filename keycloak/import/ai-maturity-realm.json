@@ -1,0 +1,79 @@
+{
+  "realm": "ai-maturity",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "clients": [
+    {
+      "clientId": "frontend-spa",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "https://audit.netbrainpower.ru/*"
+      ],
+      "webOrigins": [
+        "https://audit.netbrainpower.ru"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "https://audit.netbrainpower.ru/*"
+      }
+    },
+    {
+      "clientId": "backend-api",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "ib3hmtY!Wg!P=VXqObJ7qr4t3LTRe&n9",
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "https://audit.netbrainpower.ru/*"
+      ]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "super_admin"
+      },
+      {
+        "name": "facilitator"
+      },
+      {
+        "name": "analyst"
+      },
+      {
+        "name": "sales"
+      },
+      {
+        "name": "client"
+      },
+      {
+        "name": "auditor"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@netbrainpower.ru",
+      "firstName": "Sergey",
+      "lastName": "Admin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "-7lUWRUwHy&d&AVA5vW2Vu",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "super_admin",
+        "facilitator",
+        "analyst"
+      ]
+    }
+  ]
+}
