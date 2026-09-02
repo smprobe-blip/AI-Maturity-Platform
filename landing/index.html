@@ -400,5 +400,25 @@ footer.site{border-top:1px solid var(--line);margin-top:88px}
   </div>
 </footer>
 
+
+<script>
+/* Партнёрская атрибуция: пробрасываем ?src= из URL лендинга во все ссылки на аудиторку.
+   Дефолт (без параметра) — src=site, уже зашитый в href. Разрешены [a-z0-9_-], до 64 символов. */
+(function () {
+  'use strict';
+  try {
+    var p = new URLSearchParams(window.location.search).get('src');
+    if (!p) { return; }
+    p = String(p).toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 64);
+    if (!p) { return; }
+    var links = document.querySelectorAll('a[href*="audit.netbrainpower.ru"]');
+    for (var i = 0; i < links.length; i++) {
+      var url = new URL(links[i].getAttribute('href'), window.location.origin);
+      url.searchParams.set('src', p);
+      links[i].setAttribute('href', url.toString());
+    }
+  } catch (e) { /* no-op */ }
+})();
+</script>
 </body>
 </html>
