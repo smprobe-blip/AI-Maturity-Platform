@@ -26,7 +26,7 @@ import { Tabs } from '@/components/ui/Tabs';
 import { KpiCard } from '@/components/ui/KpiCard';
 import { adminApi } from '@/services/adminApi';
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
+const COLORS = ['#0d6b4f', '#2f8060', '#579c7c', '#85b89e', '#b2d2bf', '#565d63', '#0a5640'];
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('business');

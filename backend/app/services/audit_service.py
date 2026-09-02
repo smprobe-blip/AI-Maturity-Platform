@@ -5,7 +5,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from app.models.schemas import (
     AuditResponse,
@@ -33,6 +33,32 @@ class AuditService:
         
         self.raw_path = raw_path
         self.raw_path.mkdir(parents=True, exist_ok=True)
+
+    def list_audits(
+        self,
+        filters: Optional[Dict[str, Any]] = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list:
+        """Список аудитов (делегация в JSONStorage) с обогащением status/contact."""
+        from app.storage.json_storage import JSONStorage
+
+        audits = JSONStorage().list_audits(filters=filters, limit=limit, offset=offset)
+        for a in audits:
+            req_data = a.get('request') or {}
+            a.setdefault('status', 'completed')
+            a['contact'] = {'email': req_data.get('contact_email') or ''}
+        return audits
+
+    def archive_audit(self, audit_id: str) -> Dict[str, Any]:
+        """Пометить аудит архивным (status='archived') и сохранить."""
+        from app.storage.json_storage import JSONStorage
+
+        storage = JSONStorage()
+        audit = storage.load_audit(audit_id)
+        audit['status'] = 'archived'
+        storage.save_audit(audit)
+        return audit
 
     def create_express_audit(self, req: ExpressAuditRequest) -> AuditResponse:
         """Create new express audit and persist to storage.

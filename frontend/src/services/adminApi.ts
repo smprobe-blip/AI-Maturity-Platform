@@ -121,7 +121,8 @@ export const adminApi = {
   },
 
   archiveAudit: async (auditId: string) => {
-    const { data } = await adminClient.delete(`/audits/${auditId}`);
+    // Архивация с сохранением данных (не удаление): важно для исследовательской базы
+    const { data } = await adminClient.post(`/audits/${auditId}/archive`);
     return data;
   },
 

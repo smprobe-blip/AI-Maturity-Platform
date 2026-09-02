@@ -75,16 +75,46 @@ async def get_audit(audit_id: str):
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail=f"Audit not found: {str(e)}")
 
+from app.services.dashboard_service import DashboardService
+
+_dashboard_service = DashboardService()
+
+
 @router.get("/dashboard/business")
 async def get_business_dashboard():
     """Get business metrics dashboard."""
-    # TODO: Implement with AnalyticsService
-    return {
-        "total_audits": 0,
-        "audits_this_month": 0,
-        "conversion_rate": 0.0,
-        "average_maturity_score": 0.0,
-    }
+    return _dashboard_service.get_business_metrics()
+
+
+@router.get("/dashboard/scientific")
+async def get_scientific_dashboard():
+    """Get scientific/research metrics dashboard."""
+    return _dashboard_service.get_scientific_metrics()
+
+
+@router.get("/dashboard/operations")
+async def get_operations_dashboard():
+    """Get operations metrics dashboard."""
+    return _dashboard_service.get_operational_metrics()
+
+
+@router.get("/dashboard/quality")
+async def get_quality_dashboard():
+    """Get quality metrics dashboard."""
+    return _dashboard_service.get_quality_metrics()
+
+
+@router.post("/audits/{audit_id}/archive")
+async def archive_audit(audit_id: str):
+    """Пометить аудит архивным."""
+    from app.services.audit_service import AuditService
+
+    service = AuditService()
+    try:
+        return service.archive_audit(audit_id)
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail=f"Audit not found: {str(e)}")
 
 
 @router.get("/audits/{audit_id}/report/pdf")
