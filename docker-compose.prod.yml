@@ -62,7 +62,7 @@ services:
     image: quay.io/keycloak/keycloak:24.0
     container_name: ai-maturity-keycloak
     restart: unless-stopped
-    command: start --http-enabled=true --hostname=https://audit.netbrainpower.ru --import-realm
+    command: start --http-enabled=true --hostname=audit.netbrainpower.ru --import-realm
     depends_on:
       - keycloak-db
     environment:
