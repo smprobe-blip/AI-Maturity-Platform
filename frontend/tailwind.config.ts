@@ -6,16 +6,16 @@ export default {
     extend: {
       colors: {
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50: '#eef5f1',
+          100: '#d7e8dd',
+          200: '#b2d2bf',
+          300: '#85b89e',
+          400: '#579c7c',
+          500: '#2f8060',
+          600: '#0d6b4f',
+          700: '#0a5640',
+          800: '#093f2f',
+          900: '#07301f',
         },
         secondary: {
           50: '#f8fafc',
@@ -43,7 +43,7 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['IBM Plex Sans', 'Inter', 'system-ui', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',
