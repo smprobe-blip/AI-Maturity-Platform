@@ -120,10 +120,14 @@ def load_benchmark(industry: str) -> Optional[Dict[str, float]]:
 # Core calculations
 # ============================================================
 
-def calculate_composite_score(dimension_scores: Dict[str, float]) -> float:
-    """Calculate weighted composite score."""
+def calculate_composite_score(
+    dimension_scores: Dict[str, float],
+    weights: Optional[Dict[str, float]] = None,
+) -> float:
+    """Calculate weighted composite score (weights — отраслевые, опционально)."""
+    used = weights or DIMENSION_WEIGHTS
     total = 0.0
-    for dim_id, weight in DIMENSION_WEIGHTS.items():
+    for dim_id, weight in used.items():
         score = dimension_scores.get(dim_id, 0.0)
         total += score * weight
     return round(total, 2)
@@ -266,10 +270,11 @@ def calculate_indices(
     company_industry: Optional[str] = None,
     target_scores: Optional[Dict[str, float]] = None,
     benchmark_scores: Optional[Dict[str, float]] = None,
+    weights: Optional[Dict[str, float]] = None,
 ) -> Tuple[CalculatedIndices, List[Dict]]:
     """Calculate full set of indices from raw responses."""
     dimension_scores = _aggregate_dimension_scores(responses)
-    composite = calculate_composite_score(dimension_scores)
+    composite = calculate_composite_score(dimension_scores, weights)
     level_name, _level_code = determine_maturity_level(composite)
     roi = estimate_roi(composite)
     tco = estimate_tco(composite, company_size)
@@ -302,7 +307,8 @@ def calculate_indices(
         top3_anchors=top3_anchors,
         pattern=pattern,
         gap_analysis=gap_analysis,
-        benchmark_scores=benchmark_scores,  # NEW: include in response
+        benchmark_scores=benchmark_scores,
+        weights_used=weights or dict(DIMENSION_WEIGHTS),  # NEW: include in response
     )
     
     return indices, upsell_triggers

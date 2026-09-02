@@ -12,6 +12,7 @@ from app.models.schemas import (
     CalculatedIndices,
     ExpressAuditRequest,
 )
+from app.services.industry_weights_service import get_industry_weights
 from app.services.radar_service import (
     calculate_indices,
     generate_recommendations,
@@ -47,11 +48,13 @@ class AuditService:
         created_at = datetime.now(timezone.utc).isoformat()
 
         # 1. Calculate indices (with benchmark auto-loading)
+        weights, _weights_source = get_industry_weights(req.company_industry)
         indices, upsell_triggers = calculate_indices(
             responses=req.responses,
             company_size=req.company_size,
             company_industry=req.company_industry,
             target_scores=req.target_scores,
+            weights=weights,
         )
 
         # 2. Generate recommendations

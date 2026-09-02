@@ -94,6 +94,7 @@ class CalculatedIndices(BaseModel):
     pattern: Optional[PatternInfo] = None
     gap_analysis: Optional[GapAnalysis] = None
     benchmark_scores: Optional[Dict[str, float]] = None  # Industry benchmark
+    weights_used: Optional[Dict[str, float]] = None  # Веса осей, использованные при расчёте
 
 
 # ============================================================
