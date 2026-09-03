@@ -54,9 +54,26 @@ export default function DashboardPage() {
     enabled: activeTab === 'quality',
   });
 
+  const INDUSTRY_LABELS: Record<string, string> = {
+    retail: 'Ритейл',
+    ecommerce: 'E-commerce',
+    finance: 'Финансы и банки',
+    fintech: 'Финтех',
+    manufacturing: 'Производство',
+    telecom: 'Телеком',
+    it: 'IT / Технологии',
+    logistics: 'Логистика',
+    energy: 'Энергетика',
+    construction: 'Строительство и девелопмент',
+    healthcare: 'Здравоохранение',
+    education: 'Образование',
+    government: 'Госсектор',
+    other: 'Другое',
+  };
+
   const industryData = business?.industry_distribution
     ? Object.entries(business.industry_distribution).map(([name, value]) => ({
-        name,
+        name: INDUSTRY_LABELS[name] ?? name,
         value,
       }))
     : [];
@@ -112,10 +129,8 @@ export default function DashboardPage() {
                 icon={<CheckCircle2 className="w-5 h-5 text-primary-600" />}
               />
               <KpiCard
-                title="Конверсия"
-                value="68%"
-                delta={4.2}
-                trend="up"
+                title="За прошлый месяц"
+                value={business?.audits_last_month ?? 0}
                 icon={<TrendingUp className="w-5 h-5 text-primary-600" />}
               />
             </div>
@@ -131,7 +146,7 @@ export default function DashboardPage() {
                     <XAxis dataKey="name" angle={-20} textAnchor="end" height={80} />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+                    <Bar dataKey="value" fill="#0d6b4f" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

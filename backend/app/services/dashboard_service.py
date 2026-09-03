@@ -70,6 +70,35 @@ class DashboardService:
             "maturity_level_distribution": level_dist,
         }
 
+    def _iter_responses(self, audit: Dict[str, Any]):
+        """Оценки (dimension, score) из текущего формата request.responses."""
+        req = audit.get("request") or {}
+        responses = req.get("responses") or audit.get("responses") or {}
+        for dim, qs in responses.items():
+            if isinstance(qs, dict):
+                for q, v in sorted(qs.items()):
+                    try:
+                        yield str(dim), float(v)
+                    except (TypeError, ValueError):
+                        continue
+
+    def _cronbach_alpha(self, items: List[List[float]]) -> Optional[float]:
+        """Классический альфа Кронбаха по матрице «наблюдения x пункты»."""
+        k = len(items[0])
+        if len(items) < 2 or k < 2:
+            return None
+        variances = []
+        for j in range(k):
+            col = [row[j] for row in items]
+            m = sum(col) / len(col)
+            variances.append(sum((v - m) ** 2 for v in col) / (len(col) - 1))
+        totals = [sum(row) for row in items]
+        mt = sum(totals) / len(totals)
+        var_t = sum((t - mt) ** 2 for t in totals) / (len(totals) - 1)
+        if var_t == 0:
+            return None
+        return (k / (k - 1)) * (1 - sum(variances) / var_t)
+
     def get_scientific_metrics(self) -> Dict[str, Any]:
         """Scientific dashboard: reliability, validity, factor structure."""
         audits = self.json_storage.list_audits(limit=100000)
@@ -83,29 +112,25 @@ class DashboardService:
                 "message": "Insufficient data for scientific metrics",
             }
 
-        # Collect responses by dimension for Cronbach's alpha
-        dimension_responses: Dict[str, List[List[int]]] = {}
-        for dim_id in range(1, 8):
-            dimension_responses[str(dim_id)] = []
+        # Ответы по осям: матрицы «аудиты x 5 пунктов» для альфа Кронбаха
+        dimension_items: Dict[str, List[List[float]]] = {}
+        all_scores: List[float] = []
 
         for audit in active_audits:
-            for resp in audit.get("raw_responses", []):
-                dim = str(resp.get("dimension_id"))
-                if dim in dimension_responses:
-                    dimension_responses[dim].append(resp.get("score", 0))
+            per_dim: Dict[str, List[float]] = {}
+            for dim, score in self._iter_responses(audit):
+                all_scores.append(score)
+                per_dim.setdefault(dim, []).append(score)
+            for dim, items in per_dim.items():
+                if len(items) >= 2:
+                    dimension_items.setdefault(dim, []).append(items)
 
-        # Simplified Cronbach's alpha
+        # Альфа Кронбаха по каждой оси (наблюдений >= 2)
         cronbach = {}
-        for dim_id, scores in dimension_responses.items():
-            if len(scores) > 1:
-                alpha = self._simplified_cronbach(scores)
+        for dim_id, matrix in dimension_items.items():
+            alpha = self._cronbach_alpha(matrix)
+            if alpha is not None:
                 cronbach[dim_id] = round(alpha, 3)
-
-        # Response statistics
-        all_scores = []
-        for audit in active_audits:
-            for resp in audit.get("raw_responses", []):
-                all_scores.append(resp.get("score", 3))
 
         return {
             "sample_size": len(active_audits),
