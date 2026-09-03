@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Search, Filter, Archive } from 'lucide-react';
+import { Search, RotateCcw, Archive } from 'lucide-react';
 import { toast } from 'sonner';
 import { Table } from '@/components/ui/Table';
 import { Badge, getMaturityBadgeVariant } from '@/components/ui/Badge';
@@ -16,9 +16,19 @@ import { INDUSTRIES } from '@/constants/industries';
 export default function AuditsListPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [industry, setIndustry] = useState('');
   const [status, setStatus] = useState('');
+
+  // Дебаунс поиска: запрос к API не чаще раза в 300 мс
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
   const [archiveTarget, setArchiveTarget] = useState<Audit | null>(null);
   
   // Пагинация
@@ -62,6 +72,7 @@ export default function AuditsListPage() {
   };
 
   const handleReset = () => {
+    setSearchInput('');
     setSearch('');
     setIndustry('');
     setStatus('');
@@ -142,43 +153,62 @@ export default function AuditsListPage() {
 
       {/* Filters */}
       <div className="card mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Поиск..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+          <div className="md:col-span-5">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Поиск
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="ID, email, отрасль, компания"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="w-full pl-10 pr-9 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200"
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => setSearchInput('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Очистить поиск"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="md:col-span-3">
+            <Select
+              label="Отрасль"
+              value={industry}
+              onChange={(e) => setIndustry(e.target.value)}
+              options={[
+                { value: '', label: 'Все отрасли' },
+                ...INDUSTRIES.map((i) => ({ value: i.value, label: i.label })),
+              ]}
             />
           </div>
-          <Select
-            label="Отрасль"
-            value={industry}
-            onChange={(e) => setIndustry(e.target.value)}
-            options={[
-              { value: '', label: 'Все отрасли' },
-              ...INDUSTRIES.map((i) => ({ value: i.value, label: i.label })),
-            ]}
-          />
-          <Select
-            label="Статус"
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            options={[
-              { value: '', label: 'Все статусы' },
-              { value: 'completed', label: 'Завершённые' },
-              { value: 'archived', label: 'Архивные' },
-            ]}
-          />
-          <div className="flex items-end">
+          <div className="md:col-span-2">
+            <Select
+              label="Статус"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              options={[
+                { value: '', label: 'Все статусы' },
+                { value: 'completed', label: 'Завершённые' },
+                { value: 'archived', label: 'Архивные' },
+              ]}
+            />
+          </div>
+          <div className="md:col-span-2">
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={handleReset}
-              className="w-full justify-center"
+              className="w-full flex items-center justify-center gap-2"
             >
-              <Filter className="w-4 h-4 mr-2" />
+              <RotateCcw className="w-4 h-4" />
               Сбросить
             </Button>
           </div>
