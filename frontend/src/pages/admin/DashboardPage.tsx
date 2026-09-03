@@ -71,12 +71,13 @@ export default function DashboardPage() {
     other: 'Другое',
   };
 
-  const industryData = business?.industry_distribution
-    ? Object.entries(business.industry_distribution).map(([name, value]) => ({
-        name: INDUSTRY_LABELS[name] ?? name,
-        value,
-      }))
+  const industryEntries = business?.industry_distribution
+    ? Object.entries(business.industry_distribution)
+        .map(([name, value]) => ({ name: INDUSTRY_LABELS[name] ?? name, value }))
+        .sort((a, b) => b.value - a.value)
     : [];
+
+  const industryData = industryEntries.map((e, i) => ({ ...e, code: String(i + 1) }));
 
   const maturityData = business?.maturity_level_distribution
     ? Object.entries(business.maturity_level_distribution).map(([name, value]) => ({
@@ -140,15 +141,24 @@ export default function DashboardPage() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Распределение по отраслям
                 </h3>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={industryData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" angle={-20} textAnchor="end" height={80} />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="value" fill="#0d6b4f" radius={[8, 8, 0, 0]} />
+                    <XAxis dataKey="code" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip formatter={(value) => [value, 'Аудитов']} />
+                    <Bar dataKey="value" fill="#0d6b4f" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] leading-4 text-gray-600">
+                  {industryEntries.map((e, i) => (
+                    <span key={e.name}>
+                      <span className="font-mono font-semibold text-primary-700">{i + 1}</span>
+                      {' - '}
+                      {e.name}
+                    </span>
+                  ))}
+                </div>
               </div>
 
               <div className="card">
