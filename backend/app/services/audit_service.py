@@ -37,18 +37,58 @@ class AuditService:
     def list_audits(
         self,
         filters: Optional[Dict[str, Any]] = None,
-        limit: int = 100,
+        search: Optional[str] = None,
+        limit: int = 0,
         offset: int = 0,
     ) -> list:
-        """Список аудитов (делегация в JSONStorage) с обогащением status/contact."""
-        from app.storage.json_storage import JSONStorage
+        """Список аудитов: обогащение (status/contact/подписи), фильтры, поиск, пагинация.
 
-        audits = JSONStorage().list_audits(filters=filters, limit=limit, offset=offset)
+        Возвращает ПОЛНЫЙ отфильтрованный список при limit=0; иначе страницу.
+        """
+        from app.storage.json_storage import JSONStorage
+        from app.services.pdf_service import get_industry, get_size
+
+        filters = filters or {}
+        audits = JSONStorage().list_audits(limit=100000)
+
+        items = []
         for a in audits:
             req_data = a.get('request') or {}
-            a.setdefault('status', 'completed')
-            a['contact'] = {'email': req_data.get('contact_email') or ''}
-        return audits
+            status = a.get('status') or 'completed'
+            industry_label = get_industry(a)
+            size_label = get_size(a)
+            items.append({
+                **a,
+                'status': status,
+                'contact': {'email': req_data.get('contact_email') or ''},
+                'industry_label': industry_label,
+                'company_size_label': size_label,
+            })
+
+        if filters.get('industry'):
+            items = [x for x in items
+                     if (x.get('company_profile') or {}).get('industry') == filters['industry']]
+        if filters.get('company_size'):
+            items = [x for x in items
+                     if (x.get('company_profile') or {}).get('size') == filters['company_size']]
+        if filters.get('status'):
+            items = [x for x in items if x.get('status') == filters['status']]
+
+        if search:
+            q = search.lower().strip()
+
+            def _match(x: Dict[str, Any]) -> bool:
+                hay = ' '.join([
+                    x.get('audit_id', ''),
+                    (x.get('contact') or {}).get('email', ''),
+                    x.get('industry_label', ''),
+                    (x.get('request') or {}).get('company_name', '') or '',
+                ]).lower()
+                return q in hay
+            items = [x for x in items if _match(x)]
+
+        items.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        return items[offset:offset + limit] if limit else items
 
     def archive_audit(self, audit_id: str) -> Dict[str, Any]:
         """Пометить аудит архивным (status='archived') и сохранить."""

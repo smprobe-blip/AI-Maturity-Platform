@@ -108,6 +108,7 @@ export const adminApi = {
     industry?: string;
     company_size?: string;
     status?: string;
+    search?: string;
     limit?: number;
     offset?: number;
   }) => {

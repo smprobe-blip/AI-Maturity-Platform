@@ -27,9 +27,10 @@ async def list_audits(
     industry: Optional[str] = None,
     company_size: Optional[str] = None,
     status: Optional[str] = None,
+    search: Optional[str] = None,
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    current_user: User = Depends(get_current_user),  
+    current_user: User = Depends(get_current_user),
 ):
     """List audits with filters."""
     from app.services.audit_service import AuditService
@@ -45,16 +46,13 @@ async def list_audits(
     if status:
         filters["status"] = status
     
-    # Получаем аудиты
-    audits = service.list_audits(filters=filters if filters else None, limit=limit, offset=offset)
-    
-    # Получаем общее количество для пагинации
-    all_audits = service.list_audits(filters=filters if filters else None, limit=10000, offset=0)
-    total = len(all_audits)
+    # Полный отфильтрованный список (с поиском), затем пагинация
+    audits = service.list_audits(filters=filters if filters else None, search=search, limit=0, offset=0)
+    total = len(audits)
     total_pages = (total + limit - 1) // limit if limit > 0 else 0
-    
+
     return {
-        "items": audits,
+        "items": audits[offset:offset + limit],
         "total": total,
         "page": offset // limit + 1,
         "page_size": limit,

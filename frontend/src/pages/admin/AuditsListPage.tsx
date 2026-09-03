@@ -11,7 +11,7 @@ import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
 import { adminApi, Audit } from '@/services/adminApi';
-import { INDUSTRIES } from '@/utils/constants';
+import { INDUSTRIES } from '@/constants/industries';
 
 export default function AuditsListPage() {
   const navigate = useNavigate();
@@ -31,6 +31,7 @@ export default function AuditsListPage() {
       adminApi.listAudits({
         industry: industry || undefined,
         status: status || undefined,
+        search: search || undefined,
         limit: pageSize,
         offset: (currentPage - 1) * pageSize,
       }),
@@ -46,12 +47,7 @@ export default function AuditsListPage() {
     onError: () => toast.error('Ошибка архивации'),
   });
 
-  const audits: Audit[] = (data?.items || []).filter((a: Audit) =>
-    !search ||
-    a.contact?.email?.toLowerCase().includes(search.toLowerCase()) ||
-    a.company_profile?.industry?.toLowerCase().includes(search.toLowerCase()) ||
-    a.audit_id.includes(search)
-  );
+  const audits: Audit[] = data?.items || [];
 
   const totalItems = data?.total || 0;
   const totalPages = data?.total_pages || 0;
@@ -87,7 +83,7 @@ export default function AuditsListPage() {
     {
       key: 'size',
       header: 'Размер',
-      render: (a: Audit) => a.company_profile?.company_size || '—',
+      render: (a: Audit) => a.company_size_label || a.company_profile?.size || '—',
     },
     {
       key: 'email',
@@ -163,7 +159,7 @@ export default function AuditsListPage() {
             onChange={(e) => setIndustry(e.target.value)}
             options={[
               { value: '', label: 'Все отрасли' },
-              ...INDUSTRIES.map((i) => ({ value: i, label: i })),
+              ...INDUSTRIES.map((i) => ({ value: i.value, label: i.label })),
             ]}
           />
           <Select
