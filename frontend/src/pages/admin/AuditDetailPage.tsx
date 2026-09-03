@@ -206,15 +206,15 @@ export default function AuditDetailPage() {
               {/* Legend */}
               <div className="flex justify-center gap-6">
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-blue-500 rounded" style={{ opacity: 0.3 }} />
+                  <div className="w-4 h-4 rounded" style={{ background: '#23282d' }} />
                   <span className="text-sm text-gray-700">Текущее состояние</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-yellow-500 rounded" style={{ opacity: 0.2 }} />
+                  <div className="w-4 h-4 rounded" style={{ background: '#0d6b4f' }} />
                   <span className="text-sm text-gray-700">Целевое состояние</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-green-500 rounded" style={{ opacity: 0.15 }} />
+                  <div className="w-4 h-4 rounded" style={{ background: '#a8ada4' }} />
                   <span className="text-sm text-gray-700">Отраслевой бенчмарк</span>
                 </div>
               </div>
