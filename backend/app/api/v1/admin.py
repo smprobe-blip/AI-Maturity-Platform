@@ -62,13 +62,12 @@ async def list_audits(
 
 @router.get("/audits/{audit_id}")
 async def get_audit(audit_id: str):
-    """Get audit details."""
+    """Get audit details (enriched: raw_responses, contact, status)."""
     from app.services.audit_service import AuditService
-    
+
     service = AuditService()
     try:
-        audit = service.get_audit(audit_id)
-        return audit
+        return service.get_audit_detail(audit_id)
     except Exception as e:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail=f"Audit not found: {str(e)}")

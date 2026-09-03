@@ -95,7 +95,7 @@ export default function AuditDetailPage() {
                   <div>
                     <dt className="text-xs text-gray-500">Отрасль</dt>
                     <dd className="text-sm font-medium">
-                      {audit.company_profile?.industry}
+                      {(audit as any).industry_label || audit.company_profile?.industry}
                     </dd>
                   </div>
                   <div>

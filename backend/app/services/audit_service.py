@@ -34,6 +34,47 @@ class AuditService:
         self.raw_path = raw_path
         self.raw_path.mkdir(parents=True, exist_ok=True)
 
+    def get_audit_detail(self, audit_id: str) -> Dict[str, Any]:
+        """Детальные данные аудита для админки: сырые ответы, контакты, статус, размер."""
+        from app.storage.json_storage import JSONStorage
+        from app.services.pdf_service import get_industry, get_size
+
+        storage = JSONStorage()
+        audit = storage.load_audit(audit_id)
+
+        req_data = audit.get('request') or {}
+        profile = dict(audit.get('company_profile') or {})
+        responses = req_data.get('responses') or {}
+
+        raw_responses = []
+        for dim in sorted(responses.keys(), key=lambda x: (len(x), x)):
+            qs = responses[dim]
+            if isinstance(qs, dict):
+                for qid, v in sorted(qs.items()):
+                    try:
+                        raw_responses.append({
+                            'dimension_id': int(dim),
+                            'question_id': str(qid),
+                            'score': float(v),
+                        })
+                    except (TypeError, ValueError):
+                        continue
+        raw_responses.sort(key=lambda r: (r['dimension_id'], r['question_id']))
+
+        profile['company_size'] = profile.get('company_size') or get_size(audit)
+        profile.setdefault('region', None)
+
+        audit['industry_label'] = get_industry(audit)
+        audit['company_profile'] = profile
+        audit['contact'] = {
+            'email': req_data.get('contact_email') or '',
+            'name': req_data.get('contact_name') or '',
+            'position': req_data.get('respondent_role') or '',
+        }
+        audit['raw_responses'] = raw_responses
+        audit.setdefault('status', 'completed')
+        return audit
+
     def list_audits(
         self,
         filters: Optional[Dict[str, Any]] = None,
