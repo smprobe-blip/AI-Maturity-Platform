@@ -36,7 +36,7 @@ export default function AuditsListPage() {
   const [pageSize, setPageSize] = useState(20);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['audits', { industry, status, currentPage, pageSize }],
+    queryKey: ['audits', { industry, status, search, currentPage, pageSize }],
     queryFn: () =>
       adminApi.listAudits({
         industry: industry || undefined,
