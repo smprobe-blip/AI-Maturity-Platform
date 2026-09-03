@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import benchmarksData from '@/data/benchmarks.json';
+import { AXIS_DIM, getBenchmarkForIndustry } from '@/utils/axes';
 
 interface Audit {
   audit_id: string;
@@ -84,16 +85,7 @@ export default function RadarPage() {
   // Получение бенчмарка для отрасли
   const getBenchmark = () => {
     if (!selectedAudit) return null;
-    const industry = selectedAudit.company_profile.industry;
-    return benchmarksData.benchmarks[industry] || benchmarksData.benchmarks.CrossIndustry;
-  };
-
-  // Расчет NPV
-  const calculateNPV = () => {
-    if (!selectedAudit) return 0;
-    const score = selectedAudit.calculated_indices.composite_score;
-    // Примерная формула: NPV = (score / 5) * 10 млн руб
-    return ((score / 5) * 10).toFixed(2);
+    return getBenchmarkForIndustry(selectedAudit.company_profile?.industry);
   };
 
   // Подготовка данных для радара
@@ -102,11 +94,13 @@ export default function RadarPage() {
 
     const currentScores = selectedAudit.calculated_indices.dimension_scores;
     const benchmark = getBenchmark();
+    const targets = selectedAudit.request?.target_scores;
 
-    // Оси из benchmarks.json
+    // Оси из benchmarks.json (ключи осей -> коды измерений '1'..'7')
     return benchmarksData.axes.map((axis: any) => {
-      const current = currentScores[axis.key] || 0;
-      const target = Math.min(current + 1.0, 5.0); // Целевое = текущее + 1 (макс 5)
+      const dim = AXIS_DIM[axis.key];
+      const current = currentScores[dim] || 0;
+      const target = targets?.[dim] ?? Math.min(current + 1.0, 5.0);
       const bench = benchmark ? (benchmark[axis.key] || 0) : 2.5;
 
       return {
@@ -132,7 +126,7 @@ export default function RadarPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">🎯 AI Maturity Radar</h1>
+          <h1 className="text-2xl font-bold text-gray-900">AI Maturity Radar</h1>
           <p className="text-gray-600 mt-1">Визуализация профиля зрелости ИИ</p>
         </div>
         <div className="flex gap-2">
@@ -140,7 +134,7 @@ export default function RadarPage() {
              Главная
           </Button>
           <Button variant="secondary" onClick={() => navigate('/admin/audits')}>
-            📋 Аудиты
+            Аудиты
           </Button>
         </div>
       </div>
@@ -168,7 +162,7 @@ export default function RadarPage() {
               { value: '', label: 'Выберите аудит...' },
               ...filteredAudits.map((audit) => ({
                 value: audit.audit_id,
-                label: `${audit.contact.name || audit.company_profile.industry} - ${audit.company_profile.company_size}`,
+                label: `${audit.contact?.name || audit.company_profile?.industry} (${audit.company_size_label || audit.company_profile?.company_size || ''})`,
               })),
             ]}
           />
@@ -206,13 +200,13 @@ export default function RadarPage() {
                 <DollarSign className="w-6 h-6 text-primary-600" />
                 <div>
                   <p className="text-sm text-gray-600">
-                    💰 Финансовый эффект от прироста индекса на 1.0
+                    Потенциал роста ROI при достижении цели
                   </p>
                   <p className="text-2xl font-bold text-primary-700">
-                    {calculateNPV()} млн ₽
+                    +{(selectedAudit.calculated_indices.roi_estimate_percent ?? 0).toFixed(0)}%
                   </p>
                   <p className="text-xs text-gray-500">
-                    NPV (чистая приведённая стоимость)
+                    TCO ИИ-ландшафта: {(selectedAudit.calculated_indices.tco_estimate_millions ?? 0).toFixed(1)} млн ₽
                   </p>
                 </div>
               </div>

@@ -101,7 +101,8 @@ class AuditService:
             items.append({
                 **a,
                 'status': status,
-                'contact': {'email': req_data.get('contact_email') or ''},
+                'contact': {'email': req_data.get('contact_email') or '',
+                                'name': req_data.get('contact_name') or ''},
                 'industry_label': industry_label,
                 'company_size_label': size_label,
             })
