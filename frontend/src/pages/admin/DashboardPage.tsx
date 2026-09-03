@@ -25,6 +25,7 @@ import {
 import { Tabs } from '@/components/ui/Tabs';
 import { KpiCard } from '@/components/ui/KpiCard';
 import { adminApi } from '@/services/adminApi';
+import { INDUSTRY_LABELS } from '@/constants/industries';
 
 const COLORS = ['#0d6b4f', '#2f8060', '#579c7c', '#85b89e', '#b2d2bf', '#565d63', '#0a5640'];
 
@@ -54,22 +55,7 @@ export default function DashboardPage() {
     enabled: activeTab === 'quality',
   });
 
-  const INDUSTRY_LABELS: Record<string, string> = {
-    retail: 'Ритейл',
-    ecommerce: 'E-commerce',
-    finance: 'Финансы и банки',
-    fintech: 'Финтех',
-    manufacturing: 'Производство',
-    telecom: 'Телеком',
-    it: 'IT / Технологии',
-    logistics: 'Логистика',
-    energy: 'Энергетика',
-    construction: 'Строительство и девелопмент',
-    healthcare: 'Здравоохранение',
-    education: 'Образование',
-    government: 'Госсектор',
-    other: 'Другое',
-  };
+
 
   const industryEntries = business?.industry_distribution
     ? Object.entries(business.industry_distribution)

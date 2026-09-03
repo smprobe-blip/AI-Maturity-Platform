@@ -9,24 +9,9 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { useAuditStore } from '@/store/auditStore';
 import { REPORT_TYPES } from '@/types';
+import { INDUSTRIES } from '@/constants/industries';
 import { PublicChrome } from '@/components/layout/PublicChrome';
 
-const INDUSTRIES = [
-  { value: 'retail', label: 'Ритейл' },
-  { value: 'ecommerce', label: 'E-commerce' },
-  { value: 'finance', label: 'Финансы / Банки' },
-  { value: 'fintech', label: 'Финтех' },
-  { value: 'manufacturing', label: 'Производство' },
-  { value: 'telecom', label: 'Телеком' },
-  { value: 'it', label: 'IT / Технологии' },
-  { value: 'logistics', label: 'Логистика' },
-  { value: 'energy', label: 'Энергетика' },
-  { value: 'construction', label: 'Строительство / Девелопмент' },
-  { value: 'healthcare', label: 'Здравоохранение' },
-  { value: 'education', label: 'Образование' },
-  { value: 'government', label: 'Госсектор' },
-  { value: 'other', label: 'Другое' },
-];
 
 const SIZES = [
   { value: 'small', label: 'Малый бизнес (до 100 чел.)' },
