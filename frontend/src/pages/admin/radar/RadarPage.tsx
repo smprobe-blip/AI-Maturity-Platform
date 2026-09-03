@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import benchmarksData from '@/data/benchmarks.json';
 import { AXIS_DIM, getBenchmarkForIndustry } from '@/utils/axes';
+import { INDUSTRY_LABELS } from '@/constants/industries';
 
 interface Audit {
   audit_id: string;
@@ -150,7 +151,7 @@ export default function RadarPage() {
               { value: '', label: 'Все отрасли' },
               ...uniqueIndustries.map((ind) => ({
                 value: ind,
-                label: ind,
+                label: INDUSTRY_LABELS[ind] ?? ind,
               })),
             ]}
           />
