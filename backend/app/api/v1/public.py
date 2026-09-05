@@ -41,13 +41,42 @@ async def create_express_audit(req: ExpressAuditRequest) -> AuditResponse:
     Returns calculated indices with pattern diagnosis, top-3, upsell triggers.
     """
     try:
-        return _audit_service.create_express_audit(req)
+        resp = _audit_service.create_express_audit(req)
     except Exception as e:
         logger.error("audit_creation_failed", error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"error": {"code": "AUDIT_CREATION_FAILED", "message": str(e)}},
         )
+
+    # CRM: синхронизация лида в Baserow (не критично для создания аудита)
+    try:
+        from app.integrations.baserow_client import BaserowClient
+
+        crm_audit = {
+            "audit_id": resp.audit_id,
+            "created_at": resp.created_at,
+            "contact": {
+                "email": req.contact_email,
+                "name": req.contact_name,
+                "position": req.respondent_role or "",
+            },
+            "company_profile": {
+                "industry": req.company_industry,
+                "company_size": req.company_size,
+            },
+            "request": {
+                "company_industry": req.company_industry,
+                "company_size": req.company_size,
+            },
+            "calculated_indices": resp.calculated_indices.model_dump(),
+            "source": req.source or "direct",
+        }
+        await BaserowClient().sync_lead(crm_audit)
+    except Exception as sync_error:
+        logger.warning("baserow_lead_sync_failed", error=str(sync_error))
+
+    return resp
 
 
 @router.get(
