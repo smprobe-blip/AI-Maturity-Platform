@@ -97,8 +97,35 @@ services:
     networks:
       - app-network
 
+  baserow-redis:
+    image: redis:7-alpine
+    container_name: ai-maturity-baserow-redis
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  baserow:
+    image: baserow/baserow:1.22.3
+    container_name: ai-maturity-baserow
+    restart: unless-stopped
+    environment:
+      BASEROW_PUBLIC_URL: http://baserow:80
+      BASEROW_EXTRA_ALLOWED_HOSTS: localhost:3001
+      BASEROW_ADMIN_EMAIL: baserow-admin@netbrainpower.ru
+      BASEROW_ADMIN_PASSWORD: oYu2BTZJNIWBZfjLvzOo
+      DATABASE_URL: postgres://baserow:m62q0PB169LrGXJANz26@db:5432/baserow
+      REDIS_URL: redis://baserow-redis:6379
+    volumes:
+      - baserow_data:/baserow/data
+    depends_on:
+      - db
+      - baserow-redis
+    networks:
+      - app-network
+
 volumes:
   postgres_data:
+  baserow_data:
   caddy_data:
   caddy_config:
   keycloak_db_data:
