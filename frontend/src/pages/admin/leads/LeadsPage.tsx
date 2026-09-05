@@ -298,15 +298,28 @@ export default function LeadsPage() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
           {/* Search */}
           <div className="md:col-span-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Поиск
+            </label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Поиск..."
+                placeholder="Имя, email, ID аудита"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full pl-10 pr-9 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200"
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Очистить поиск"
+                >
+                  ×
+                </button>
+              )}
             </div>
           </div>
           
