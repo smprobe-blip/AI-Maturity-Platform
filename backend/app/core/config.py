@@ -73,6 +73,22 @@ class Settings(BaseSettings):
     KEYCLOAK_CLIENT_ID: str = "backend-api"
     KEYCLOAK_CLIENT_SECRET: str = ""
     KEYCLOAK_JWKS_URL: str = "http://keycloak:8080/realms/ai-maturity/protocol/openid-connect/certs"
+
+    # Строчные алиасы для модулей, читающих settings.<lowercase>
+    keycloak_url: str = "http://keycloak:8080"
+    keycloak_realm: str = "ai-maturity"
+    keycloak_client_id: str = "backend-api"
+    keycloak_client_secret: str = ""
+    access_token_expire_minutes: int = 43200
+    algorithm: str = "HS256"
+    secret_key: str = "dev-secret-key-change-in-production"
+    yandex_s3_endpoint: str = "http://minio:9000"
+    yandex_s3_access_key: str = "minioadmin"
+    yandex_s3_secret_key: str = "minioadmin"
+    yandex_s3_bucket: str = "ai-maturity-data"
+    yandex_s3_region: str = "ru-central1"
+    cors_origins_list: str = "http://localhost:3000,http://localhost:8000"
+
     
     # Data storage paths
     DATA_STORAGE_PATH: str = "/data_storage"
