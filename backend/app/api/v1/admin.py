@@ -177,6 +177,21 @@ async def get_email_status(
     return email_service.get_status()
 
 
+@router.patch("/leads/{lead_id}/status")
+async def update_lead_status(lead_id: int, status_data: dict):
+    """Обновить статус лида в Baserow."""
+    status = (status_data or {}).get("status")
+    if not status:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail="status is required")
+
+    result = await lead_service.update_lead_status(lead_id, status)
+    if not result:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail="Failed to update lead status")
+    return {"id": lead_id, "status": status}
+
+
 @router.get("/leads/status")
 async def get_leads_status(
     current_user: User = Depends(get_current_user),

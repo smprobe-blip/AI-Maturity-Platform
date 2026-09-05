@@ -31,24 +31,33 @@ class LeadService:
                     return row[k]
             return None
 
-        score = get_val("composite_score", "Composite Score", "composite score")
-        roi = get_val("roi_estimate", "ROI Estimate", "roi estimate")
+        score = get_val("Балл зрелости", "composite_score", "Composite Score")
+        roi = get_val("ROI Estimate", "roi_estimate")
 
         return {
             "id": row.get("id"),
-            "audit_id": str(get_val("audit_id", "Audit ID") or ""),
-            "name": str(get_val("name", "Name") or ""),
-            "email": str(get_val("email", "Email") or ""),
-            "position": str(get_val("position", "Position") or ""),
-            "industry": str(get_val("industry", "Industry") or ""),
-            "company_size": str(get_val("company_size", "Company Size") or ""),
-            "region": str(get_val("region", "Region") or ""),
+            "audit_id": str(get_val("Audit ID", "audit_id") or ""),
+            "name": str(get_val("Имя", "name", "Name") or ""),
+            "email": str(get_val("Email", "email") or ""),
+            "position": str(get_val("Должность", "position", "Position") or ""),
+            "industry": str(get_val("Отрасль", "industry", "Industry") or ""),
+            "company_size": str(get_val("Размер компании", "company_size", "Company Size") or ""),
+            "region": str(get_val("Регион", "region", "Region") or ""),
             "composite_score": float(score) if score is not None else 0.0,
             "maturity_level": str(get_val("maturity_level", "Maturity Level") or ""),
             "roi_estimate": float(roi) if roi is not None else 0.0,
-            "status": str(get_val("status", "Status") or "New"),
-            "created_at": str(get_val("created_at", "Created At") or ""),
-        }
+            "status": (get_val("Статус", "status", "Status").get("value")
+                        if isinstance(get_val("Статус", "status", "Status"), dict)
+                        else (get_val("Статус", "status", "Status") or "New")),
+                                    "created_at": str(get_val("Дата создания", "created_at") or ""),
+                    }
+
+    async def update_lead_status(self, lead_id: int, status: str) -> bool:
+        """Обновить статус лида через Baserow API."""
+        from app.integrations.baserow_client import BaserowClient
+
+        client = BaserowClient()
+        return await client.update_lead_status(lead_id, status)
 
     def list_leads(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
         """List all leads from Baserow."""

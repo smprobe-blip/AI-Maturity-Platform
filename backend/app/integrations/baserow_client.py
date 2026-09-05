@@ -19,9 +19,9 @@ class BaserowClient:
         api_token: Optional[str] = None,
         leads_table_id: Optional[int] = None,
     ):
-        self.base_url = (base_url or settings.baserow_url).rstrip("/")
-        self.api_token = api_token or settings.baserow_api_token
-        self.leads_table_id = leads_table_id or settings.baserow_leads_table_id
+        self.base_url = (base_url or settings.BASEROW_URL).rstrip("/")
+        self.api_token = api_token or settings.BASEROW_API_TOKEN
+        self.leads_table_id = leads_table_id or settings.BASEROW_LEADS_TABLE_ID
         
         # Используем user_field_names=true для работы с именами полей
         self.api_url = f"{self.base_url}/api/database/rows/table/{self.leads_table_id}/?user_field_names=true"
@@ -46,20 +46,20 @@ class BaserowClient:
             maturity_level = indices.get("maturity_level") or ""
             maturity_level = maturity_level.replace("\u2014", "-").replace("—", "-")
 
-            # Данные с обычными именами (числовые поля как СТРОКИ!)
+            # Реальные поля таблицы «Лиды из аудита» (RU, user_field_names)
+            from app.services.pdf_service import get_industry, get_size
+
             row_data = {
-                "audit_id": audit_data.get("audit_id") or "",
-                "email": contact.get("email") or "",
-                "name": contact.get("name") or "",
-                "position": contact.get("position") or "",
-                "industry": profile.get("industry") or "",
-                "company_size": profile.get("company_size") or "",
-                "region": profile.get("region") or "",
-                "composite_score": int(round(float(composite_score))),
-                "maturity_level": maturity_level,
-                "roi_estimate": int(round(float(roi_estimate))),
-                "status": "new",
-                "created_at": audit_data.get("created_at") or "",
+                "Имя": contact.get("name") or "",
+                "Email": contact.get("email") or "",
+                "Audit ID": audit_data.get("audit_id") or "",
+                "Отрасль": get_industry(audit_data),
+                "Размер компании": get_size(audit_data),
+                "Балл зрелости": round(float(composite_score), 1),
+                "Уровень зрелости": maturity_level,
+                "Статус": "New",
+                "Источник": audit_data.get("source") or "direct",
+                "Дата создания": str(audit_data.get("created_at") or "")[:10],
             }
 
             logger.info("baserow_sync_attempt",
@@ -74,7 +74,7 @@ class BaserowClient:
                 headers={
                     "Authorization": f"Token {self.api_token}",
                     "Content-Type": "application/json; charset=utf-8",
-                    "Host": "localhost",
+                    "Host": "localhost:3001",
                 },
                 timeout=10,
             )
@@ -103,11 +103,11 @@ class BaserowClient:
             url = f"{self.base_url}/api/database/rows/table/{self.leads_table_id}/{row_id}/?user_field_names=true"
             response = requests.patch(
                 url,
-                json={"status": status},
+                json={"Статус": status},
                  headers={
                     "Authorization": f"Token {self.api_token}",
                     "Content-Type": "application/json; charset=utf-8",
-                    "Host": "localhost",
+                    "Host": "localhost:3001",
                 },
                 timeout=10,
             )
@@ -126,7 +126,7 @@ class BaserowClient:
                 headers={
                     "Authorization": f"Token {self.api_token}",
                     "Content-Type": "application/json; charset=utf-8",
-                    "Host": "localhost",
+                    "Host": "localhost:3001",
                 },
                 timeout=10,
             )
