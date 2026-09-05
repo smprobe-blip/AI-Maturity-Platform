@@ -8,7 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.v1 import public, admin
+from app.api.v1 import public, admin, analytics
 from app.core.config import settings
 from app.core.exceptions import (
     AppException,
@@ -84,6 +84,7 @@ async def log_requests(request: Request, call_next):
 # Include routers
 app.include_router(public.router, prefix="/api/v1/public", tags=["Public API"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin API"])
+app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
 
 # Health check
 @app.get("/health", tags=["Health"])

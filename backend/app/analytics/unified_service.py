@@ -28,53 +28,42 @@ class UnifiedAnalyticsService:
         self.report = DissertationReportGenerator()
 
     def run_full_analysis(self) -> Dict[str, Any]:
-        """Run complete analytics pipeline."""
+        """Run complete analytics pipeline. Каждая секция — с изоляцией ошибок."""
         logger.info("full_analysis_started")
 
         results = {}
 
-        # 1. Descriptive statistics
-        logger.info("running_descriptive_statistics")
-        results["descriptive"] = self.descriptive.full_descriptive_report()
+        def _safe(key: str, fn):
+            try:
+                results[key] = fn()
+            except Exception as e:
+                logger.warning("analysis_section_failed", section=key, error=str(e))
+                results[key] = {"status": "error", "message": str(e)}
 
-        # 2. Reliability analysis
-        logger.info("running_reliability_analysis")
-        results["reliability"] = self.reliability.full_reliability_report()
+        _safe("descriptive", lambda: self.descriptive.full_descriptive_report())
+        _safe("reliability", lambda: self.reliability.full_reliability_report())
+        _safe("factor_analysis", lambda: self.factor.run_efa(n_factors=7))
+        _safe("pca", lambda: self.factor.run_pca(n_components=7))
+        _safe("optimal_factors", lambda: self.factor.determine_optimal_factors())
 
-        # 3. Factor analysis
-        logger.info("running_factor_analysis")
-        results["factor_analysis"] = self.factor.run_efa(n_factors=7)
-
-        # 4. PCA (for comparison)
-        logger.info("running_pca")
-        results["pca"] = self.factor.run_pca(n_components=7)
-
-        # 5. Optimal factors
-        logger.info("determining_optimal_factors")
-        results["optimal_factors"] = self.factor.determine_optimal_factors()
-
-        # 6. Regression analysis
         logger.info("running_regression_analysis")
-        results["regression"] = {
-            "maturity_to_roi": self.regression.maturity_to_roi_regression(),
-            "dimension_contribution": self.regression.dimension_contribution_regression(),
-            "logistic": self.regression.logistic_regression_maturity_level(),
-            "hierarchical": self.regression.hierarchical_regression(),
-        }
 
-        # 7. Cluster analysis
+        def _regression():
+            return {
+                "maturity_to_roi": self.regression.maturity_to_roi_regression(),
+                "dimension_contribution": self.regression.dimension_contribution_regression(),
+                "logistic": self.regression.logistic_regression_maturity_level(),
+                "hierarchical": self.regression.hierarchical_regression(),
+            }
+
+        _safe("regression", _regression)
+
         logger.info("running_cluster_analysis")
-        results["cluster_analysis"] = self.cluster.kmeans_clustering()
 
-        # 8. Industry comparison
-        logger.info("running_industry_comparison")
-        results["industry_comparison"] = self.cluster.compare_industries()
+        def _cluster():
+            return self.cluster.kmeans_clustering(n_clusters=4)
 
-        # 9. Generate visualizations
-        logger.info("generating_visualizations")
-        results["figures"] = self.visualization.generate_all_figures(results)
-
-        logger.info("full_analysis_completed")
+        _safe("cluster", _cluster)
 
         return results
 

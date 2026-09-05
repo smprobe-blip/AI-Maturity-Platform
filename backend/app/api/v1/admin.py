@@ -7,8 +7,9 @@ from fastapi import APIRouter, Query, Depends
 from typing import Optional
 
 from app.core.auth import get_current_user, User
+from app.core.config import settings
 
-from fastapi.responses import Response
+from fastapi.responses import Response, FileResponse
 
 from app.services.reports.pdf_service import pdf_service
 
@@ -17,6 +18,14 @@ from app.services.email_service import email_service
 from app.services.lead_service import lead_service
 
 from app.services.analytics_service import analytics_service
+from app.services.export_service import ExportService
+from app.analytics.unified_service import UnifiedAnalyticsService
+from app.analytics.report_generator import DissertationReportGenerator
+
+from pathlib import Path as FsPath
+from datetime import datetime as _dt
+
+_export_service = ExportService()
 
 
 router = APIRouter()
@@ -259,6 +268,78 @@ async def get_analytics_top_companies(
 async def get_analytics_by_company_size(current_user: User = Depends(get_current_user)):
     """Get analytics grouped by company size."""
     return analytics_service.get_by_company_size()
+
+
+# ─── Выгрузки ───
+
+
+@router.post("/exports")
+async def create_export(payload: dict, current_user: User = Depends(get_current_user)):
+    """Создать выгрузку данных (экспорт в файл)."""
+    return _export_service.create_export(
+        export_type=payload.get("export_type", "audits_aggregated"),
+        format=payload.get("format", "csv"),
+        filters=payload.get("filters"),
+        nda_signed=bool(payload.get("nda_signed", False)),
+        user_id=current_user.sub,
+    )
+
+
+@router.get("/exports/history")
+async def get_exports_history(limit: int = 50, current_user: User = Depends(get_current_user)):
+    """История выгрузок."""
+    return _export_service.get_export_history(limit)
+
+
+@router.get("/exports/{export_id}/download")
+async def download_export_file(export_id: str, current_user: User = Depends(get_current_user)):
+    """Скачать файл выгрузки."""
+    from fastapi import HTTPException
+
+    path = _export_service.get_export_file_path(export_id)
+    if not path:
+        raise HTTPException(status_code=404, detail="Export file not found")
+    return FileResponse(str(path), filename=path.name)
+
+
+# ─── Отчеты (библиотека) ───
+
+
+@router.get("/reports")
+async def list_report_files(current_user: User = Depends(get_current_user)):
+    """Библиотека сгенерированных PDF-отчетов."""
+    base = FsPath(settings.reports_path)
+    items = []
+    if base.exists():
+        for f in sorted(base.rglob("*.pdf"), key=lambda p: p.stat().st_mtime, reverse=True):
+            items.append({
+                "filename": f.name,
+                "kind": "dissertation" if "dissertation" in str(f.parent) else "audit",
+                "size_bytes": f.stat().st_size,
+                "created_at": _dt.fromtimestamp(f.stat().st_mtime).isoformat(),
+            })
+    return {"items": items}
+
+
+@router.get("/reports/download/{filename}")
+async def download_report_file(filename: str, current_user: User = Depends(get_current_user)):
+    """Скачать PDF-отчет по имени файла."""
+    from fastapi import HTTPException
+
+    safe = FsPath(filename).name
+    base = FsPath(settings.reports_path)
+    matches = list(base.rglob(safe))
+    if not matches:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return FileResponse(str(matches[0]), filename=safe)
+
+
+@router.post("/reports/generate-dissertation")
+async def generate_dissertation_report(current_user: User = Depends(get_current_user)):
+    """Сгенерировать диссертационный отчет (полный статистический анализ)."""
+    analytics_data = UnifiedAnalyticsService().run_full_analysis()
+    path = DissertationReportGenerator().generate_full_report(analytics_data)
+    return {"filename": FsPath(path).name, "path": str(path)}
 
 
 @router.get("/research/export-csv", summary="Export research dataset (CSV)")

@@ -221,7 +221,7 @@ class FactorAnalysisService:
         if len(df) < 30:
             return {"status": "insufficient_data", "sample_size": len(df)}
 
-        fa = FactorAnalyzer(n_components=n_components, method="principal")
+        fa = FactorAnalyzer(n_factors=n_components, method="principal")
         fa.fit(df.values)
 
         ev, v = fa.get_eigenvalues()

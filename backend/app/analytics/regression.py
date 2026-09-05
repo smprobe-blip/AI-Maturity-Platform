@@ -85,13 +85,13 @@ class RegressionService:
             "independent": "Composite Maturity Score",
             "coefficients": {
                 "intercept": {
-                    "value": float(model.params[0]),
-                    "p_value": float(model.pvalues[0]),
+                    "value": float(model.params.iloc[0]),
+                    "p_value": float(model.pvalues.iloc[0]),
                     "ci_95": [float(model.conf_int().iloc[0, 0]), float(model.conf_int().iloc[0, 1])],
                 },
                 "composite_score": {
-                    "value": float(model.params[1]),
-                    "p_value": float(model.pvalues[1]),
+                    "value": float(model.params.iloc[1]),
+                    "p_value": float(model.pvalues.iloc[1]),
                     "ci_95": [float(model.conf_int().iloc[1, 0]), float(model.conf_int().iloc[1, 1])],
                 },
             },
@@ -311,17 +311,17 @@ class RegressionService:
     def _interpret_regression(self, model) -> str:
         """Generate plain-language interpretation."""
         r2 = model.rsquared
-        coef = model.params[1]
+        coef = model.params.iloc[1]
 
         interpretation = f"The model explains {r2*100:.1f}% of variance in ROI. "
         interpretation += f"For each 1-point increase in maturity score, "
         interpretation += f"ROI increases by {coef:.1f} percentage points."
 
-        if model.pvalues[1] < 0.001:
+        if model.pvalues.iloc[1] < 0.001:
             interpretation += " This effect is highly significant (p < 0.001)."
-        elif model.pvalues[1] < 0.01:
+        elif model.pvalues.iloc[1] < 0.01:
             interpretation += " This effect is significant (p < 0.01)."
-        elif model.pvalues[1] < 0.05:
+        elif model.pvalues.iloc[1] < 0.05:
             interpretation += " This effect is significant (p < 0.05)."
         else:
             interpretation += " This effect is not statistically significant."

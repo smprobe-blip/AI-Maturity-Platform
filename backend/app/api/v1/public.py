@@ -201,6 +201,15 @@ async def download_audit_pdf(audit_id: str) -> Response:
         
         # Generate PDF
         pdf_bytes = generate_pdf_report(audit_data)
+
+        # копия в библиотеку отчетов
+        try:
+            from pathlib import Path as _P
+            _rep = _P(settings.reports_path) / "audits"
+            _rep.mkdir(parents=True, exist_ok=True)
+            (_rep / f"{audit_id}.pdf").write_bytes(pdf_bytes)
+        except Exception as _save_err:
+            logger.warning("pdf_library_save_failed", error=str(_save_err))
         
         return Response(
             content=pdf_bytes,
