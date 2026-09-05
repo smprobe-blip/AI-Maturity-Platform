@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { KpiCard } from '@/components/ui/KpiCard';
 import { Badge } from '@/components/ui/Badge';
 import { analyticsApi } from '@/services/analyticsApi';
+import { INDUSTRY_LABELS } from '@/constants/industries';
 
 const dimensionNames: Record<string, string> = {
   '1': 'Strategy & Vision',
@@ -142,7 +143,7 @@ export default function AnalyticsPage() {
                 {Object.entries(descriptive?.industry_distribution || {}).map(
                   ([industry, count]) => (
                     <div key={industry} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <span className="font-medium">{industry}</span>
+                      <span className="font-medium">{INDUSTRY_LABELS[industry] ?? industry}</span>
                       <Badge variant="info">{count as number}</Badge>
                     </div>
                   )
