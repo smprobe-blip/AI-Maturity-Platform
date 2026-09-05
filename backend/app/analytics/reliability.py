@@ -26,14 +26,23 @@ class ReliabilityService:
 
         rows = []
         for audit in active:
+            req_data = audit.get("request") or {}
+            responses = req_data.get("responses") or audit.get("responses") or {}
+            qs = responses.get(str(dimension_id)) or {}
+            if not isinstance(qs, dict) or len(qs) < 2:
+                continue
             row = {"audit_id": audit.get("audit_id")}
-            for resp in audit.get("raw_responses", []):
-                if resp["dimension_id"] == dimension_id:
-                    row[f"Q{resp['question_id']}"] = resp["score"]
-            if len(row) == 6:  # audit_id + 5 questions
+            for qid, v in sorted(qs.items()):
+                try:
+                    row[f"Q{qid}"] = float(v)
+                except (TypeError, ValueError):
+                    continue
+            if len(row) >= 3:
                 rows.append(row)
 
-        df = pd.DataFrame(rows).set_index("audit_id")
+        df = pd.DataFrame(rows)
+        if "audit_id" in df.columns:
+            df = df.set_index("audit_id")
         return df
 
     def cronbach_alpha(self, dimension_id: int) -> Dict[str, Any]:

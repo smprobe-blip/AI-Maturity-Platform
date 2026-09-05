@@ -62,6 +62,9 @@ class RegressionService:
         if len(df) < 30:
             return {"status": "insufficient_data", "sample_size": len(df)}
 
+        if df["roi_percent"].nunique() < 2:
+            return {"status": "insufficient_data", "reason": "Нет вариативности ROI в данных (все значения одинаковы)"}
+
         # Simple linear regression
         X = sm.add_constant(df["composite_score"])
         y = df["roi_percent"]
@@ -118,6 +121,8 @@ class RegressionService:
         """Multiple regression: all dimensions → ROI."""
         df = self._prepare_dataset()
 
+        if df["roi_percent"].nunique() < 2:
+            return {"status": "insufficient_data", "reason": "Нет вариативности ROI в данных"}
         if len(df) < 50:
             return {"status": "insufficient_data", "sample_size": len(df)}
 
