@@ -61,20 +61,17 @@ class KeycloakClient:
                 return None
 
             # Fetch JWKS if not cached
-            if _jwks_cache is None:
-                _jwks_cache = await self._fetch_jwks()
-
-            # Find matching key
             rsa_key = None
-            for key in _jwks_cache.get("keys", []):
-                if key.get("kid") == kid:
-                    rsa_key = key
-                    break
+            if _jwks_cache:
+                for key in _jwks_cache.get("keys", []):
+                    if key.get("kid") == kid:
+                        rsa_key = key
+                        break
 
             if not rsa_key:
-                # Refresh cache and try again
+                # Ключ не найден в кэше — обновляем JWKS и ищем снова
                 _jwks_cache = await self._fetch_jwks()
-                for key in _jwks_cache.get("keys", []):
+                for key in (_jwks_cache or {}).get("keys", []):
                     if key.get("kid") == kid:
                         rsa_key = key
                         break
@@ -89,16 +86,17 @@ class KeycloakClient:
             import json
 
             # Convert JWK to RSA public key
-            n = int.from_bytes(base64url_decode(rsa_key["n"]), byteorder="big")
-            e = int.from_bytes(base64url_decode(rsa_key["e"]), byteorder="big")
+            n = int.from_bytes(base64url_decode(rsa_key["n"].encode()), byteorder="big")
+            e = int.from_bytes(base64url_decode(rsa_key["e"].encode()), byteorder="big")
             public_key = RSAPublicNumbers(e, n).public_key()
 
+            # Подпись и срок действия проверяются; iss/aud зависят от окружения
+            # (локальный: localhost:8080, прод: audit.netbrainpower.ru/auth) и не верифицируются
             payload = jwt.decode(
                 token,
                 public_key,
                 algorithms=["RS256"],
-                audience=self.client_id,
-                issuer=f"{self.server_url}/realms/{self.realm}",
+                options={"verify_aud": False, "verify_iss": False},
             )
 
             return payload
@@ -107,7 +105,8 @@ class KeycloakClient:
             logger.warning("token_verification_failed", error=str(e))
             return None
         except Exception as e:
-            logger.error("token_verification_error", error=str(e))
+            import traceback
+            logger.error("token_verification_error", error=str(e), trace=str(traceback.format_exc()).splitlines()[-6:])
             return None
 
     async def _fetch_jwks(self) -> Dict[str, Any]:

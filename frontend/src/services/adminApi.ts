@@ -215,6 +215,21 @@ updateLeadStatus: async (leadId: number, status: string) => {
   const { data } = await adminClient.patch(`/leads/${leadId}/status`, { status });
   return data;
 },
+
+  getReports: async () => {
+    const { data } = await adminClient.get('/reports');
+    return data;
+  },
+  downloadReport: async (filename: string) => {
+    const { data } = await adminClient.get(`/reports/download/${encodeURIComponent(filename)}`, {
+      responseType: 'blob',
+    });
+    return data as Blob;
+  },
+  generateDissertationReport: async () => {
+    const { data } = await adminClient.post('/reports/generate-dissertation');
+    return data;
+  },
 // USERS
 listUsers: async () => {
     const { data } = await adminClient.get('/users');
