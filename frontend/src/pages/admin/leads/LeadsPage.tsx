@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, RefreshCw, TrendingUp, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, RotateCcw, RefreshCw, TrendingUp, Users, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { adminApi } from '@/services/adminApi';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -199,7 +199,7 @@ export default function LeadsPage() {
       render: (lead: Lead) => (
         <div className="flex gap-2">
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => navigate(`/admin/audits/${lead.audit_id}`)}
           >
@@ -349,11 +349,11 @@ export default function LeadsPage() {
           {/* Reset Button */}
           <div className="md:col-span-2 flex items-end">
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={handleReset}
               className="w-full"
             >
-              <Filter className="w-4 h-4 mr-2" />
+              <RotateCcw className="w-4 h-4 mr-2" />
               Сбросить
             </Button>
           </div>
@@ -382,20 +382,21 @@ export default function LeadsPage() {
             </div>
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={() => setCurrentPage(1)}
                 disabled={currentPage === 1}
                 className="px-2"
+                aria-label="Первая страница"
               >
-                <ChevronLeft className="w-4 h-4" />
-                <ChevronLeft className="w-4 h-4 -ml-2" />
+                <ChevronsLeft className="w-4 h-4" />
               </Button>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={() => setCurrentPage(currentPage - 1)}
                 disabled={currentPage === 1}
+                aria-label="Предыдущая страница"
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
@@ -403,7 +404,7 @@ export default function LeadsPage() {
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                 <Button
                   key={page}
-                  variant={currentPage === page ? 'primary' : 'outline'}
+                  variant={currentPage === page ? 'primary' : 'secondary'}
                   size="sm"
                   onClick={() => setCurrentPage(page)}
                   className="min-w-[36px] px-3"
@@ -413,22 +414,23 @@ export default function LeadsPage() {
               ))}
               
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={() => setCurrentPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
+                aria-label="Следующая страница"
               >
                 <ChevronRight className="w-4 h-4" />
               </Button>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={() => setCurrentPage(totalPages)}
                 disabled={currentPage === totalPages}
                 className="px-2"
+                aria-label="Последняя страница"
               >
-                <ChevronRight className="w-4 h-4" />
-                <ChevronRight className="w-4 h-4 -ml-2" />
+                <ChevronsRight className="w-4 h-4" />
               </Button>
             </div>
           </div>
