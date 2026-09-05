@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     fonts-dejavu-core \
     fonts-dejavu-extra \
+    fonts-liberation \
     fontconfig \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
