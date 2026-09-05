@@ -76,19 +76,21 @@ export const Pagination: React.FC<PaginationProps> = ({
 
       <div className="flex items-center gap-2">
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={() => onPageChange(1)}
           disabled={currentPage === 1}
+          aria-label="Первая страница"
         >
           <ChevronsLeft className="w-4 h-4" />
         </Button>
         
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
+          aria-label="Предыдущая страница"
         >
           <ChevronLeft className="w-4 h-4" />
         </Button>
@@ -99,7 +101,7 @@ export const Pagination: React.FC<PaginationProps> = ({
           ) : (
             <Button
               key={page}
-              variant={currentPage === page ? 'primary' : 'outline'}
+              variant={currentPage === page ? 'primary' : 'secondary'}
               size="sm"
               onClick={() => onPageChange(page as number)}
             >
@@ -109,19 +111,21 @@ export const Pagination: React.FC<PaginationProps> = ({
         ))}
 
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
+          aria-label="Следующая страница"
         >
           <ChevronRight className="w-4 h-4" />
         </Button>
         
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={() => onPageChange(totalPages)}
           disabled={currentPage === totalPages}
+          aria-label="Последняя страница"
         >
           <ChevronsRight className="w-4 h-4" />
         </Button>
