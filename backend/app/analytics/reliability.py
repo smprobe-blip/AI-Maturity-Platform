@@ -32,9 +32,15 @@ class ReliabilityService:
             if not isinstance(qs, dict) or len(qs) < 2:
                 continue
             row = {"audit_id": audit.get("audit_id")}
-            for qid, v in sorted(qs.items()):
+            # нормализация qid: в данных два формата — '1'..'5' и 'd.q' ('1.1'..'1.5');
+            # сортируем по номеру вопроса внутри оси и строим позиционные колонки
+            try:
+                items = sorted(qs.items(), key=lambda kv: int(str(kv[0]).split(".")[-1]))
+            except ValueError:
+                items = sorted(qs.items())
+            for pos, (_qid, v) in enumerate(items, start=1):
                 try:
-                    row[f"Q{qid}"] = float(v)
+                    row[f"Q{pos}"] = float(v)
                 except (TypeError, ValueError):
                     continue
             if len(row) >= 3:
