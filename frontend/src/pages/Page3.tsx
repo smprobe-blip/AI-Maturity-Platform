@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { RadarChartWithBenchmark } from '@/components/charts/RadarChartWithBenchmark';
+import { BENCHMARK_AXES } from '@/utils/axes';
 import { useAuditStore } from '@/store/auditStore';
 import { publicApi } from '@/services/api';
 
@@ -83,6 +84,7 @@ export default function Page3() {
   }
 
   const indices = auditData?.calculated_indices || calculatedIndices;
+  const weightsUsed = (indices?.weights_used || {}) as Record<string, number>;
   const auditForRadar = getAuditForRadar();
 
   return (
@@ -166,21 +168,24 @@ export default function Page3() {
           <h2 className="text-xl font-bold text-gray-900 mb-4">Детализация по осям</h2>
           <div className="space-y-4">
             {Object.entries(indices?.dimension_scores || {}).map(([dimId, score]: [string, any]) => {
-              const dimensionNames: Record<string, string> = {
-                '1': 'Strategy & Vision',
-                '2': 'Data & Analytics',
-                '3': 'Technology & Infrastructure',
-                '4': 'Processes & Operations',
-                '5': 'People & Skills',
-                '6': 'Culture & Change',
-                '7': 'Ethics & Governance',
-              };
+              // канонические RU-названия осей (единый справочник бенчмарков)
+              const dimensionNames = Object.fromEntries(
+                BENCHMARK_AXES.map((a, i) => [String(i + 1), a.label])
+              ) as Record<string, string>;
               const scoreNum = typeof score === 'number' ? score : parseFloat(score);
               return (
                 <div key={dimId}>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="font-medium text-gray-700">
-                      {dimensionNames[dimId] || `Dimension ${dimId}`}
+                      {dimensionNames[dimId] || `Ось ${dimId}`}
+                      {weightsUsed?.[dimId] != null && (
+                        <span
+                          className="ml-2 text-xs text-gray-500 bg-gray-100 rounded px-1.5 py-0.5 align-middle"
+                          title="Вес оси в комплексной оценке (отраслевые веса по формулам А.1–А.2)"
+                        >
+                          вес {Math.round(weightsUsed[dimId] * 100)}%
+                        </span>
+                      )}
                     </span>
                     <span className="font-bold text-gray-900">{scoreNum.toFixed(2)}</span>
                   </div>
@@ -193,6 +198,13 @@ export default function Page3() {
                 </div>
               );
             })}
+            {Object.keys(weightsUsed).length > 0 && (
+              <p className="text-xs text-gray-500 pt-2 border-t border-gray-100">
+                Веса осей рассчитаны по отраслевому алгоритму методики (формулы А.1–А.2):
+                базовые веса скорректированы на данных вашей отрасли и применены при расчёте
+                комплексной оценки.
+              </p>
+            )}
           </div>
         </div>
 
