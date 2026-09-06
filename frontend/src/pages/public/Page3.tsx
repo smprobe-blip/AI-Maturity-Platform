@@ -285,6 +285,7 @@ export default function Page3() {
                 <tr className="text-left text-xs text-gray-500 uppercase border-b border-gray-200">
                   <th className="py-2 pr-2">Ось</th>
                   <th className="py-2 pr-2">Балл</th>
+                  <th className="py-2 pr-2">Вес</th>
                   <th className="py-2 pr-2">Бенчмарк</th>
                   <th className="py-2 pr-2">Разрыв</th>
                   <th className="py-2">Интерпретация</th>
@@ -293,6 +294,8 @@ export default function Page3() {
               <tbody>
                 {DIM_ORDER.map((id) => {
                   const s = Number(indices.dimension_scores?.[id] ?? 0);
+                  const wiRaw = (indices.weights_used as Record<string, number> | undefined)?.[id];
+                  const wi = typeof wiRaw === 'number' ? wiRaw : null;
                   const b = benchmarkScores ? Number(benchmarkScores[id] ?? 0) : null;
                   const gap = b !== null ? s - b : null;
                   let interp = bandPhrase(s);
@@ -303,6 +306,9 @@ export default function Page3() {
                     <tr key={id} className="border-b border-gray-100">
                       <td className="py-2 pr-2 font-medium text-gray-900">{DIM_NAMES[id]}</td>
                       <td className="py-2 pr-2 font-bold text-gray-900 nbp-mono">{s.toFixed(1)}</td>
+                      <td className="py-2 pr-2 text-gray-600 nbp-mono">
+                        {wi !== null ? Math.round(wi * 100) + '%' : '—'}
+                      </td>
                       <td className="py-2 pr-2 text-gray-600">{b !== null ? b.toFixed(1) : '—'}</td>
                       <td className={'py-2 pr-2 font-semibold ' + (gap !== null && gap < 0 ? 'text-red-600' : 'text-green-600')}>
                         {gap !== null ? (gap > 0 ? '+' : '') + gap.toFixed(1) : '—'}
@@ -313,6 +319,11 @@ export default function Page3() {
                 })}
               </tbody>
             </table>
+            <p className="text-xs text-gray-500 mt-3">
+              Вес — доля оси в комплексной оценке. Веса рассчитаны по отраслевому
+              алгоритму методики (формулы А.1–А.2): базовые веса скорректированы
+              на данных вашей отрасли.
+            </p>
           </div>
         </div>
 
