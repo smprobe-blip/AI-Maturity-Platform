@@ -43,7 +43,8 @@ class ReliabilityService:
         df = pd.DataFrame(rows)
         if "audit_id" in df.columns:
             df = df.set_index("audit_id")
-        return df
+        # listwise удаление неполных ответов (стандарт психометрики)
+        return df.dropna()
 
     def cronbach_alpha(self, dimension_id: int) -> Dict[str, Any]:
         """Calculate Cronbach's alpha for a dimension."""
