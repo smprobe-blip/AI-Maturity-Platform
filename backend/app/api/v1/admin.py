@@ -123,6 +123,35 @@ async def archive_audit(audit_id: str):
         raise HTTPException(status_code=404, detail=f"Audit not found: {str(e)}")
 
 
+@router.delete("/audits/{audit_id}")
+async def delete_audit(audit_id: str):
+    """Безвозвратно удалить аудит (для тестовых: source=test_manual) + связанный лид CRM."""
+    from app.services.audit_service import AuditService
+
+    service = AuditService()
+    try:
+        result = service.delete_audit(audit_id)
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail=f"Audit not found: {str(e)}")
+
+    lead_deleted = False
+    try:
+        from app.integrations.baserow_client import BaserowClient
+        lead_deleted = BaserowClient().delete_lead_by_audit(audit_id)
+    except Exception:
+        pass
+
+    audit = result.get("audit") or {}
+    source = audit.get("source") or (audit.get("request") or {}).get("source")
+    return {
+        "status": "deleted",
+        "audit_id": audit_id,
+        "source": source,
+        "lead_deleted": lead_deleted,
+    }
+
+
 @router.get("/audits/{audit_id}/report/pdf")
 async def get_audit_pdf_report(
     audit_id: str,

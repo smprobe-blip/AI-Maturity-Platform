@@ -97,6 +97,42 @@ class BaserowClient:
             logger.error("baserow_sync_error", error=str(e), exc_info=True)
             return None
 
+    def delete_lead_by_audit(self, audit_id: str) -> bool:
+        """Удалить лид CRM по Audit ID аудита (если строка существует)."""
+        if not self.api_token or not self.leads_table_id:
+            return False
+        try:
+            base = f"{self.base_url}/api/database/rows/table/{self.leads_table_id}/"
+            response = requests.get(
+                base + "?user_field_names=true&size=200",
+                headers={
+                    "Authorization": f"Token {self.api_token}",
+                    "Host": "localhost:3001",
+                },
+                timeout=10,
+            )
+            if response.status_code != 200:
+                logger.error("baserow_lead_lookup_failed", status=response.status_code)
+                return False
+            for row in response.json().get("results", []):
+                if str(row.get("Audit ID", "")) == str(audit_id):
+                    del_resp = requests.delete(
+                        f"{base}{row['id']}/",
+                        headers={
+                            "Authorization": f"Token {self.api_token}",
+                            "Host": "localhost:3001",
+                        },
+                        timeout=10,
+                    )
+                    logger.info("baserow_lead_deleted",
+                                row_id=row.get("id"), audit_id=audit_id,
+                                status=del_resp.status_code)
+                    return del_resp.status_code in (200, 204)
+            return False
+        except Exception as e:
+            logger.error("baserow_lead_delete_error", error=str(e), exc_info=True)
+            return False
+
     async def update_lead_status(self, row_id: int, status: str) -> bool:
         """Update lead status in Baserow."""
         try:

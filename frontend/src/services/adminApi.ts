@@ -36,6 +36,7 @@ export interface Audit {
   audit_id: string;
   created_at: string;
   status: string;
+  source?: string;
   audit_type: string;
   company_profile: {
     industry: string;
@@ -125,6 +126,12 @@ export const adminApi = {
     // Архивация с сохранением данных (не удаление): важно для исследовательской базы
     const { data } = await adminClient.post(`/audits/${auditId}/archive`);
     return data;
+  },
+
+  deleteAudit: async (auditId: string) => {
+    // Безвозвратное удаление (для тестовых аудитов): JSON + связанный лид CRM
+    const { data } = await adminClient.delete(`/audits/${auditId}`);
+    return data as { status: string; audit_id: string; source?: string; lead_deleted: boolean };
   },
 
   // BENCHMARKS

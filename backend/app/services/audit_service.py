@@ -142,6 +142,15 @@ class AuditService:
         storage.save_audit(audit)
         return audit
 
+    def delete_audit(self, audit_id: str) -> Dict[str, Any]:
+        """Безвозвратно удалить аудит (JSON). Предназначено для тестовых аудитов."""
+        from app.storage.json_storage import JSONStorage
+
+        storage = JSONStorage()
+        audit = storage.load_audit(audit_id)  # исключение, если нет
+        deleted = storage.delete_audit(audit_id)
+        return {"audit": audit, "deleted": deleted}
+
     def create_express_audit(self, req: ExpressAuditRequest) -> AuditResponse:
         """Create new express audit and persist to storage.
         

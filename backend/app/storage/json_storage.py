@@ -68,6 +68,15 @@ class JSONStorage:
             logger.error("audit_load_failed", audit_id=audit_id, error=str(e))
             raise StorageException("load_audit", {"audit_id": audit_id, "error": str(e)})
 
+    def delete_audit(self, audit_id: str) -> bool:
+        """Безвозвратно удалить JSON-файл аудита. True — если файл существовал."""
+        file_path = self._get_audit_path(audit_id)
+        if not file_path.exists():
+            return False
+        file_path.unlink()
+        logger.info("audit_deleted", audit_id=audit_id, path=str(file_path))
+        return True
+
     def list_audits(
         self,
         filters: Optional[Dict[str, Any]] = None,

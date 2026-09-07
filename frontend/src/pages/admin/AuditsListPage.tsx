@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Search, RotateCcw, Archive } from 'lucide-react';
+import { Search, RotateCcw, Archive, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Table } from '@/components/ui/Table';
 import { Badge, getMaturityBadgeVariant } from '@/components/ui/Badge';
@@ -30,6 +30,7 @@ export default function AuditsListPage() {
     return () => clearTimeout(t);
   }, [searchInput]);
   const [archiveTarget, setArchiveTarget] = useState<Audit | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Audit | null>(null);
   
   // Пагинация
   const [currentPage, setCurrentPage] = useState(1);
@@ -55,6 +56,20 @@ export default function AuditsListPage() {
       setArchiveTarget(null);
     },
     onError: () => toast.error('Ошибка архивации'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: adminApi.deleteAudit,
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['audits'] });
+      toast.success(
+        res.lead_deleted
+          ? 'Тестовый аудит и связанный лид CRM удалены'
+          : 'Тестовый аудит удалён'
+      );
+      setDeleteTarget(null);
+    },
+    onError: () => toast.error('Ошибка удаления'),
   });
 
   const audits: Audit[] = data?.items || [];
@@ -136,6 +151,33 @@ export default function AuditsListPage() {
         >
           {a.status}
         </Badge>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Действия',
+      render: (a: Audit) => (
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          {a.source === 'test_manual' ? (
+            <Button
+              variant="danger"
+              className="!px-2 !py-1"
+              title="Удалить тестовый аудит безвозвратно"
+              onClick={() => setDeleteTarget(a)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              className="!px-2 !py-1"
+              title="Архивировать (данные сохраняются)"
+              onClick={() => setArchiveTarget(a)}
+            >
+              <Archive className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
       ),
     },
   ];
@@ -259,6 +301,33 @@ export default function AuditsListPage() {
           >
             <Archive className="w-4 h-4 mr-2" />
             Архивировать
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Delete modal (тестовые аудиты) */}
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Удалить тестовый аудит?"
+      >
+        <p className="text-gray-600 mb-6">
+          Тестовый аудит <strong>{deleteTarget?.audit_id.slice(0, 8)}...</strong> будет
+          удалён безвозвратно — вместе со связанным лидом CRM, если он создавался.
+          Восстановление невозможно.
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
+            Отмена
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() =>
+              deleteTarget && deleteMutation.mutate(deleteTarget.audit_id)
+            }
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Удалить
           </Button>
         </div>
       </Modal>
