@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, RotateCcw, RefreshCw, TrendingUp, Users, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { adminApi } from '@/services/adminApi';
+import { INDUSTRIES, INDUSTRY_EXTRA_LABELS } from '@/constants/industries';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
@@ -38,6 +39,13 @@ const safeFloat = (val: any, fallback = 0): number => {
   return isNaN(num) ? fallback : num;
 };
 
+/** Метки отраслей в лидах (Baserow, backend INDUSTRY_MAP), отличающиеся от анкеты. */
+const BACKEND_LABEL_SYNONYMS: Record<string, string[]> = {
+  'IT / Технологии': ['IT'],
+  'Финансы / Банки': ['Финансы и банки'],
+  'Строительство / Девелопмент': ['Строительство и девелопмент'],
+};
+
 export default function LeadsPage() {
   const navigate = useNavigate();
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -50,10 +58,6 @@ export default function LeadsPage() {
   // Пагинация
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
-
-  const uniqueIndustries = Array.from(
-    new Set(leads.map(l => l.industry).filter(Boolean))
-  ).sort();
 
   useEffect(() => {
     loadLeads();
@@ -75,7 +79,14 @@ export default function LeadsPage() {
       filtered = filtered.filter(lead => lead.status === statusFilter);
     }
     if (industryFilter) {
-      filtered = filtered.filter(lead => lead.industry === industryFilter);
+      // совпадение по всем вариантам имени: метка анкеты, код, метка бэкенда в лидах
+      const aliases = new Set<string>([industryFilter]);
+      const code = INDUSTRIES.find(i => i.label === industryFilter)?.value;
+      if (code) aliases.add(code);
+      if (BACKEND_LABEL_SYNONYMS[industryFilter]) {
+        BACKEND_LABEL_SYNONYMS[industryFilter].forEach(x => aliases.add(x));
+      }
+      filtered = filtered.filter(lead => aliases.has(lead.industry));
     }
     setFilteredLeads(filtered);
     setCurrentPage(1);
@@ -341,7 +352,8 @@ export default function LeadsPage() {
               onChange={(e) => setIndustryFilter(e.target.value)}
               options={[
                 { value: '', label: 'Все отрасли' },
-                ...uniqueIndustries.map(ind => ({ value: ind, label: ind })),
+                ...INDUSTRIES.map(i => ({ value: i.label, label: i.label })),
+                ...Object.entries(INDUSTRY_EXTRA_LABELS).map(([v, l]) => ({ value: l, label: l })),
               ]}
             />
           </div>
