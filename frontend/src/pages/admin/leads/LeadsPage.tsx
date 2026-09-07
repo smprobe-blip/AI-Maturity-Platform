@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, RotateCcw, RefreshCw, TrendingUp, Users, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { adminApi } from '@/services/adminApi';
-import { INDUSTRIES, INDUSTRY_EXTRA_LABELS } from '@/constants/industries';
+import { INDUSTRIES, INDUSTRY_EXTRA_LABELS, INDUSTRY_LABELS } from '@/constants/industries';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
@@ -40,6 +40,15 @@ const safeFloat = (val: any, fallback = 0): number => {
 };
 
 /** Метки отраслей в лидах (Baserow, backend INDUSTRY_MAP), отличающиеся от анкеты. */
+/** Каноническое RU-название отрасли (как в анкете) для отображения. */
+const canonicalIndustry = (raw?: string): string => {
+  if (!raw) return '—';
+  const labels = INDUSTRY_LABELS as Record<string, string>;
+  if (Object.values(labels).includes(raw)) return raw;
+  if (labels[raw]) return labels[raw];
+  const canonical = Object.entries(BACKEND_LABEL_SYNONYMS).find(([, syn]) => syn.includes(raw))?.[0];
+  return canonical || raw;
+};
 const BACKEND_LABEL_SYNONYMS: Record<string, string[]> = {
   'IT / Технологии': ['IT'],
   'Финансы / Банки': ['Финансы и банки'],
@@ -160,7 +169,7 @@ export default function LeadsPage() {
       header: 'Компания',
       render: (lead: Lead) => (
         <div>
-          <div>{lead.industry || '—'}</div>
+          <div>{canonicalIndustry(lead.industry)}</div>
           <div className="text-sm text-gray-500">{lead.company_size || ''}</div>
         </div>
       ),
