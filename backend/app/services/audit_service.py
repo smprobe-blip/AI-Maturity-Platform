@@ -101,6 +101,8 @@ class AuditService:
             items.append({
                 **a,
                 'status': status,
+                # source хранится в request.source (старые записи — без верхнего уровня)
+                'source': a.get('source') or req_data.get('source') or '',
                 'contact': {'email': req_data.get('contact_email') or '',
                                 'name': req_data.get('contact_name') or ''},
                 'industry_label': industry_label,

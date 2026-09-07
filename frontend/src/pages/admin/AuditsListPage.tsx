@@ -151,6 +151,9 @@ export default function AuditsListPage() {
         >
           {a.status}
         </Badge>
+        {a.source === 'test_manual' && (
+          <Badge variant="warning">тест</Badge>
+        )}
       ),
     },
     {
