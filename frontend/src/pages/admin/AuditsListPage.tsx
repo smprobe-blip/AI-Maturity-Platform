@@ -140,20 +140,22 @@ export default function AuditsListPage() {
       key: 'status',
       header: 'Статус',
       render: (a: Audit) => (
-        <Badge
-          variant={
-            a.status === 'completed'
-              ? 'success'
-              : a.status === 'archived'
-              ? 'neutral'
-              : 'warning'
-          }
-        >
-          {a.status}
-        </Badge>
-        {a.source === 'test_manual' && (
-          <Badge variant="warning">тест</Badge>
-        )}
+        <>
+          <Badge
+            variant={
+              a.status === 'completed'
+                ? 'success'
+                : a.status === 'archived'
+                ? 'neutral'
+                : 'warning'
+            }
+          >
+            {a.status}
+          </Badge>
+          {a.source === 'test_manual' && (
+            <Badge variant="warning">тест</Badge>
+          )}
+        </>
       ),
     },
     {
