@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     smtp_from_email: str = "noreply@ai-maturity.local"
     smtp_use_tls: bool = False
     
+    # Публичный базовый URL (ссылки в письмах)
+    public_base_url: str = "http://localhost:3000"
+
     # Baserow Settings
     baserow_api_token: str = "CE49jfknihUgaVqxJDUPqUXixc8hrsmx"
     baserow_leads_table_id: int = 511
