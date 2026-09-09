@@ -40,6 +40,46 @@ class EmailService:
                     print("EmailService: read error %s: %s" % (files[0], e))
         return None
 
+    def get_status(self) -> dict:
+        """Статус SMTP-конфигурации (без секретов)."""
+        return {
+            "configured": bool(os.getenv("SMTP_HOST")),
+            "host": self.smtp_host,
+            "port": self.smtp_port,
+            "use_tls": self.use_tls,
+            "from_email": self.from_email,
+            "from_name": self.from_name,
+            "auth_enabled": bool(self.smtp_user and self.smtp_password),
+        }
+
+    def send_email(self, to_emails, subject, html_body: str = "", text_body: str = "") -> bool:
+        """Отправка письма без вложений. Возвращает True при успехе."""
+        to_list = [to_emails] if isinstance(to_emails, str) else list(to_emails)
+        msg = MIMEMultipart()
+        msg["From"] = "%s <%s>" % (self.from_name, self.from_email)
+        msg["To"] = ", ".join(to_list)
+        msg["Subject"] = subject
+        msg.attach(MIMEText(
+            html_body or text_body or "",
+            "html" if html_body else "plain",
+            "utf-8",
+        ))
+        try:
+            with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=15) as server:
+                if self.use_tls:
+                    server.starttls()
+                if self.smtp_user and self.smtp_password:
+                    try:
+                        server.login(self.smtp_user, self.smtp_password)
+                    except Exception:
+                        pass
+                server.sendmail(self.from_email, to_list, msg.as_string())
+            print("EmailService: send_email ok -> %s" % to_list)
+            return True
+        except Exception as e:
+            print("EmailService: send_email failed: %s" % e)
+            return False
+
     def send_report(self, to_email, audit_id, body=""):
         audit_data = self._load_audit(audit_id) or {"audit_id": audit_id}
 

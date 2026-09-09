@@ -1,204 +1,118 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Save } from 'lucide-react';
-import { toast } from 'sonner';
-import { Tabs } from '@/components/ui/Tabs';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { adminApi, Methodology } from '@/services/adminApi';
+import { useQuery } from '@tanstack/react-query';
+import { KeyRound, Database, Mail, ShieldCheck } from 'lucide-react';
+import { Badge } from '@/components/ui/Badge';
+import { adminApi } from '@/services/adminApi';
+
+function Row({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0">
+      <span className="text-sm text-gray-600">{label}</span>
+      <span className="text-sm font-medium text-gray-900 font-mono">{value}</span>
+    </div>
+  );
+}
+
+function Dot({ ok }: { ok: boolean }) {
+  return (
+    <span
+      className={`inline-block w-2 h-2 rounded-full mr-2 ${ok ? 'bg-green-500' : 'bg-red-400'}`}
+    />
+  );
+}
 
 export default function SettingsPage() {
-  const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('methodology');
-  const [weights, setWeights] = useState<Record<string, number>>({});
-
-  const { data: methodology } = useQuery({
-    queryKey: ['methodology'],
-    queryFn: adminApi.getMethodology,
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ['settings'],
+    queryFn: adminApi.getSettings,
   });
 
-  const { data: integrations } = useQuery({
-    queryKey: ['integrations'],
-    queryFn: adminApi.getIntegrations,
-  });
+  if (isLoading || !settings) {
+    return (
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Настройки</h1>
+        <p className="text-gray-500">Загрузка…</p>
+      </div>
+    );
+  }
 
-  const [intForm, setIntForm] = useState<Record<string, any>>({});
-
-  useEffect(() => {
-    if (methodology?.weights) setWeights(methodology.weights);
-  }, [methodology]);
-
-  useEffect(() => {
-    if (integrations) setIntForm(integrations);
-  }, [integrations]);
-
-  const updateMethodology = useMutation({
-    mutationFn: () => adminApi.updateMethodology({ weights }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['methodology'] });
-      toast.success('Методология обновлена');
-    },
-    onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Ошибка'),
-  });
-
-  const updateIntegrations = useMutation({
-    mutationFn: () => adminApi.updateIntegrations(intForm),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['integrations'] });
-      toast.success('Интеграции обновлены');
-    },
-  });
-
-  const totalWeight = Object.values(weights).reduce((s, v) => s + (v || 0), 0);
-
-  const tabs = [
-    { id: 'methodology', label: 'Методология' },
-    { id: 'integrations', label: 'Интеграции' },
-  ];
-
-  const dimensionNames: Record<string, string> = {
-    '1': 'Strategy & Vision',
-    '2': 'Data & Analytics',
-    '3': 'Technology',
-    '4': 'Processes',
-    '5': 'People & Skills',
-    '6': 'Culture & Change',
-    '7': 'Ethics & Governance',
-  };
+  const k = settings.integrations.keycloak;
+  const b = settings.integrations.baserow;
+  const e = settings.integrations.email;
+  const d = settings.data;
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Настройки</h1>
-        <p className="text-gray-600 mt-1">Конфигурация платформы</p>
-      </div>
+      <h1 className="text-3xl font-bold text-gray-900 mb-1">Настройки</h1>
+      <p className="text-gray-600 mb-6">
+        Состояние платформы (только чтение; секреты не отображаются)
+      </p>
 
-      <div className="card">
-        <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <KeyRound className="w-5 h-5 text-primary-600" />
+            Аутентификация (Keycloak)
+          </h2>
+          <Row label="Realm" value={k.realm} />
+          <Row label="Client ID" value={k.client_id} />
+          <div className="flex items-center justify-between py-1.5">
+            <span className="text-sm text-gray-600 flex items-center">
+              <Dot ok={k.configured} />
+              Состояние
+            </span>
+            <Badge variant={k.configured ? 'success' : 'danger'}>
+              {k.configured ? 'подключено' : 'не настроено'}
+            </Badge>
+          </div>
+        </div>
 
-        <div className="mt-6">
-          {activeTab === 'methodology' && (
-            <div>
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Веса осей</h3>
-                  <div
-                    className={`text-sm font-semibold ${
-                      Math.abs(totalWeight - 1) < 0.01
-                        ? 'text-green-600'
-                        : 'text-red-600'
-                    }`}
-                  >
-                    Сумма: {totalWeight.toFixed(2)}{' '}
-                    {Math.abs(totalWeight - 1) < 0.01 ? '✓' : '(должно быть 1.00)'}
-                  </div>
-                </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Database className="w-5 h-5 text-primary-600" />
+            CRM (Baserow)
+          </h2>
+          <Row label="URL" value={b.url} />
+          <Row label="Таблица лидов" value={`#${b.leads_table_id}`} />
+          <div className="flex items-center justify-between py-1.5">
+            <span className="text-sm text-gray-600 flex items-center">
+              <Dot ok={b.configured} />
+              Состояние
+            </span>
+            <Badge variant={b.configured ? 'success' : 'danger'}>
+              {b.configured ? 'подключено' : 'не настроено'}
+            </Badge>
+          </div>
+        </div>
 
-                <div className="space-y-3">
-                  {Object.entries(weights).map(([dimId, weight]) => (
-                    <div
-                      key={dimId}
-                      className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg"
-                    >
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">
-                          Ось {dimId}: {dimensionNames[dimId]}
-                        </div>
-                      </div>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="1"
-                        value={weight}
-                        onChange={(e) =>
-                          setWeights({
-                            ...weights,
-                            [dimId]: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-right"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Mail className="w-5 h-5 text-primary-600" />
+            Почта (SMTP)
+          </h2>
+          <Row label="Сервер" value={`${e.host}:${e.port}`} />
+          <Row label="Отправитель" value={`${e.from_name} <${e.from_email}>`} />
+          <Row label="TLS" value={e.use_tls ? 'да' : 'нет'} />
+          <div className="flex items-center justify-between py-1.5">
+            <span className="text-sm text-gray-600 flex items-center">
+              <Dot ok={e.configured} />
+              Состояние
+            </span>
+            <Badge variant={e.configured ? 'success' : 'warning'}>
+              {e.configured ? 'настроена' : 'не настроена'}
+            </Badge>
+          </div>
+        </div>
 
-              <Button
-                onClick={() => updateMethodology.mutate()}
-                disabled={Math.abs(totalWeight - 1) > 0.01 || updateMethodology.isPending}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Сохранить методологию
-              </Button>
-            </div>
-          )}
-
-          {activeTab === 'integrations' && (
-            <div className="space-y-6">
-              <div className="p-4 border border-gray-200 rounded-lg">
-                <h3 className="font-semibold mb-3">Baserow CRM</h3>
-                <div className="space-y-3">
-                  <Input
-                    label="URL"
-                    value={intForm.baserow?.url || ''}
-                    onChange={(e) =>
-                      setIntForm({
-                        ...intForm,
-                        baserow: { ...intForm.baserow, url: e.target.value },
-                      })
-                    }
-                  />
-                  <Input
-                    label="API Token"
-                    type="password"
-                    value={intForm.baserow?.api_token || ''}
-                    onChange={(e) =>
-                      setIntForm({
-                        ...intForm,
-                        baserow: { ...intForm.baserow, api_token: e.target.value },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="p-4 border border-gray-200 rounded-lg">
-                <h3 className="font-semibold mb-3">SMTP</h3>
-                <div className="space-y-3">
-                  <Input
-                    label="Хост"
-                    value={intForm.smtp?.host || ''}
-                    onChange={(e) =>
-                      setIntForm({
-                        ...intForm,
-                        smtp: { ...intForm.smtp, host: e.target.value },
-                      })
-                    }
-                  />
-                  <Input
-                    label="Порт"
-                    type="number"
-                    value={intForm.smtp?.port || ''}
-                    onChange={(e) =>
-                      setIntForm({
-                        ...intForm,
-                        smtp: { ...intForm.smtp, port: parseInt(e.target.value) || 0 },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              <Button
-                onClick={() => updateIntegrations.mutate()}
-                disabled={updateIntegrations.isPending}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Сохранить интеграции
-              </Button>
-            </div>
-          )}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-primary-600" />
+            Данные
+          </h2>
+          <Row label="Аудитов всего" value={d.audits_total} />
+          <Row label="Активных" value={d.audits_active} />
+          <Row label="В архиве" value={d.audits_archived} />
+          <Row label="Тестовых (test_manual)" value={d.audits_test_manual} />
+          <Row label="PDF в библиотеке отчётов" value={d.reports_pdf} />
         </div>
       </div>
     </div>

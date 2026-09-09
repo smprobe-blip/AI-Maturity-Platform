@@ -265,6 +265,122 @@ async def send_test_email(
         from fastapi import HTTPException
         raise HTTPException(status_code=500, detail="Failed to send email")
 
+# === Users (респонденты платформы) ===
+@router.get("/users")
+async def list_users(current_user: User = Depends(get_current_user)):
+    """Пользователи платформы: агрегация респондентов по email из аудитов."""
+    from app.services.audit_service import AuditService
+
+    items = AuditService().list_audits()
+    users: dict = {}
+    for a in items:
+        contact = a.get("contact") or {}
+        email = (contact.get("email") or "").strip().lower()
+        if not email or "@" not in email:
+            continue
+        u = users.setdefault(email, {
+            "email": email,
+            "name": contact.get("name") or "",
+            "audits_count": 0,
+            "test_audits": 0,
+            "first_seen": a.get("created_at") or "",
+            "last_seen": a.get("created_at") or "",
+            "sources": set(),
+        })
+        u["audits_count"] += 1
+        if a.get("source") == "test_manual":
+            u["test_audits"] += 1
+        created = a.get("created_at") or ""
+        if created:
+            u["first_seen"] = min(u["first_seen"], created)
+            u["last_seen"] = max(u["last_seen"], created)
+        src = a.get("source") or (a.get("request") or {}).get("source")
+        if src:
+            u["sources"].add(src)
+    out = []
+    for u in users.values():
+        u["sources"] = sorted(u["sources"])
+        out.append(u)
+    out.sort(key=lambda x: x["last_seen"], reverse=True)
+    return {"items": out, "total": len(out)}
+
+
+# === Настройки (не-секретный снимок) ===
+@router.get("/settings")
+async def get_settings(current_user: User = Depends(get_current_user)):
+    """Сводка состояния платформы: интеграции, данные. Секреты не возвращаются."""
+    from app.core.config import settings as app_settings
+    from app.services.audit_service import AuditService
+
+    audits = AuditService().list_audits()
+    active = [a for a in audits if a.get("status") != "archived"]
+    archived_count = len(audits) - len(active)
+    test_manual = sum(
+        1 for a in audits
+        if (a.get("source") or (a.get("request") or {}).get("source")) == "test_manual"
+    )
+    reports_dir = FsPath(app_settings.reports_path) / "dissertation"
+    reports_count = len(list(reports_dir.glob("*.pdf"))) if reports_dir.exists() else 0
+
+    return {
+        "platform": {"name": "AI Maturity Assessment Platform"},
+        "integrations": {
+            "keycloak": {
+                "realm": app_settings.keycloak_realm,
+                "client_id": app_settings.keycloak_client_id,
+                "configured": True,
+            },
+            "baserow": {
+                "url": app_settings.BASEROW_URL,
+                "leads_table_id": app_settings.BASEROW_LEADS_TABLE_ID,
+                "configured": bool(app_settings.BASEROW_API_TOKEN),
+            },
+            "email": email_service.get_status(),
+        },
+        "data": {
+            "audits_total": len(audits),
+            "audits_active": len(active),
+            "audits_archived": archived_count,
+            "audits_test_manual": test_manual,
+            "reports_pdf": reports_count,
+        },
+    }
+
+
+# === Журнал аудитов ===
+@router.get("/audit-log")
+async def get_audit_log(
+    user_id: Optional[str] = Query(None),
+    action: Optional[str] = Query(None),
+    limit: int = Query(200, le=1000),
+    current_user: User = Depends(get_current_user),
+):
+    """Хронология создания аудитов платформой (из хранилища, новые сверху)."""
+    from app.services.audit_service import AuditService
+
+    items = AuditService().list_audits()
+    events = []
+    for a in items:
+        req = a.get("request") or {}
+        email = (a.get("contact") or {}).get("email") or req.get("contact_email") or "—"
+        events.append({
+            "timestamp": a.get("created_at"),
+            "user_email": email,
+            "action": "audit.created",
+            "resource_type": "audit",
+            "resource_id": a.get("audit_id"),
+            "source": a.get("source") or req.get("source") or "",
+            "status": a.get("status") or "completed",
+            "success": (a.get("status") or "completed") != "failed",
+        })
+    events.sort(key=lambda e: e["timestamp"] or "", reverse=True)
+    if user_id:
+        events = [e for e in events if user_id.lower() in (e["user_email"] or "").lower()]
+    if action:
+        events = [e for e in events if e["action"] == action]
+    return {"items": events[:limit]}
+
+
 # === Analytics Endpoints ===
 
 @router.get("/analytics/overview")

@@ -87,10 +87,37 @@ export interface DashboardMetrics {
 }
 
 export interface User {
-  user_id: string;
   email: string;
-  role: string;
-  invited_at: string;
+  name: string;
+  audits_count: number;
+  test_audits: number;
+  first_seen: string;
+  last_seen: string;
+  sources: string[];
+}
+
+export interface PlatformSettings {
+  platform: { name: string };
+  integrations: {
+    keycloak: { realm: string; client_id: string; configured: boolean };
+    baserow: { url: string; leads_table_id: number; configured: boolean };
+    email: {
+      configured: boolean;
+      host: string;
+      port: number;
+      use_tls: boolean;
+      from_email: string;
+      from_name: string;
+      auth_enabled: boolean;
+    };
+  };
+  data: {
+    audits_total: number;
+    audits_active: number;
+    audits_archived: number;
+    audits_test_manual: number;
+    reports_pdf: number;
+  };
 }
 
 export interface Methodology {
@@ -202,14 +229,22 @@ export const adminApi = {
     return data;
   },
 
-  // USERS
-  inviteUser: async (payload: {
-    email: string;
-    first_name: string;
-    last_name: string;
-    role: string;
-  }) => {
-    const { data } = await adminClient.post('/users/invite', payload);
+
+  // SETTINGS
+  getSettings: async () => {
+    const { data } = await adminClient.get('/settings');
+    return data as PlatformSettings;
+  },
+
+  // EMAIL
+  getEmailStatus: async () => {
+    const { data } = await adminClient.get('/email/status');
+    return data as PlatformSettings['integrations']['email'];
+  },
+  sendTestEmail: async (email: string) => {
+    const { data } = await adminClient.post(
+      `/email/send-test?to_email=${encodeURIComponent(email)}`
+    );
     return data;
   },
 

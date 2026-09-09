@@ -43,6 +43,11 @@ export default function AuditLogPage() {
       ),
     },
     {
+      key: 'source',
+      header: 'Источник',
+      render: (l: any) => l.source || '—',
+    },
+    {
       key: 'success',
       header: 'Результат',
       render: (l: any) => (
@@ -56,8 +61,8 @@ export default function AuditLogPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Журнал действий</h1>
-        <p className="text-gray-600 mt-1">Аудит всех действий администраторов</p>
+        <h1 className="text-3xl font-bold text-gray-900">Журнал аудитов</h1>
+    <p className="text-gray-600 mt-1">Хронология создания аудитов платформой (новые сверху)</p>
       </div>
 
       <Table
