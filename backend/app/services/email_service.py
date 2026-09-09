@@ -269,10 +269,14 @@ class EmailService:
 
         if self.provider == "postbox":
             sender = self.postbox_from_email or self.from_email
-            if self.postbox_from_name:
-                msg["From"] = "%s <%s>" % (self.postbox_from_name, sender)
-            else:
-                msg.replace_header("From", sender)
+            from_header = (
+                "%s <%s>" % (self.postbox_from_name, sender)
+                if self.postbox_from_name else sender
+            )
+            try:
+                msg.replace_header("From", from_header)
+            except KeyError:
+                msg["From"] = from_header
             sent_ok = self._send_raw_via_postbox(to_email, msg.as_string().encode("utf-8"))
             if sent_ok:
                 print("EmailService: sent via Postbox to %s" % to_email)
