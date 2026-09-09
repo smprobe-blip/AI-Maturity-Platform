@@ -172,20 +172,25 @@ class EmailService:
             else (self.postbox_from_email or self.from_email)
         )
         to_list = [to_emails] if isinstance(to_emails, str) else list(to_emails)
-        content: dict = {"Subject": {"Data": subject, "Charset": "UTF-8"}}
+        body: dict = {}
         if html_body:
-            content["Html"] = {"Data": html_body, "Charset": "UTF-8"}
+            body["Html"] = {"Data": html_body, "Charset": "UTF-8"}
         if text_body:
-            content["Text"] = {"Data": text_body, "Charset": "UTF-8"}
+            body["Text"] = {"Data": text_body, "Charset": "UTF-8"}
         payload = {
             "FromEmailAddress": from_addr,
             "Destination": {"ToAddresses": to_list},
-            "Content": {"Simple": content},
+            "Content": {"Simple": {
+                "Subject": {"Data": subject, "Charset": "UTF-8"},
+                "Body": body,
+            }},
         }
         return self._postbox_send(payload)
 
     def _send_raw_via_postbox(self, mime_bytes: bytes) -> bool:
-        payload = {"RawMessage": {"Data": mime_bytes.decode("utf-8")}}
+        import base64 as _b64
+
+        payload = {"RawMessage": {"Data": _b64.b64encode(mime_bytes).decode("ascii")}}
         return self._postbox_send(payload)
 
     def send_report(self, to_email, audit_id, body=""):
