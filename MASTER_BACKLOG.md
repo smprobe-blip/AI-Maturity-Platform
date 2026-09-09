@@ -35,6 +35,7 @@
 ## 🔥 Очередь (приоритет)
 
 ### EMAIL-1: Отправка отчётов через Yandex Cloud Postbox
+**Статус 09.09:** адаптер реализован и задеплоен (35f28e3) — SES v2 API (SigV4, ru-central1), Simple/Raw с PDF-вложениями, SMTP fallback через env. Спящий режим: активируется POSTBOX_ACCESS_KEY_ID/POSTBOX_SECRET_ACCESS_KEY в .env. ВАЖНО: хост smtp.mail.yandex.net из старого плана не существует в DNS; рабочий транспорт — HTTPS API postbox.cloud.yandex.net:443 (доступен с VPS). Осталось: API-ключ (yc.postbox.send) от владельца, домен + адрес в Postbox, DKIM CNAME в DNS Timeweb, тестовая отправка.
 **Статус:** диагностика проведена, выбран провайдер  
 **Блокер для:** полноценного сбора данных (респонденты не получают PDF-отчёт)
 
