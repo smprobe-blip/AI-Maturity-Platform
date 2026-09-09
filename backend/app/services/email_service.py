@@ -24,6 +24,14 @@ class EmailService:
         self.from_email = os.getenv("FROM_EMAIL", "reports@ai-maturity.platform")
         self.from_name = os.getenv("FROM_NAME", "AI Maturity Platform")
         self.raw_path = os.getenv("RAW_AUDITS_PATH", "/data_storage/raw_audits")
+        # Postbox (Yandex Cloud, SES v2 совместимый API)
+        self.postbox_key_id = os.getenv("POSTBOX_ACCESS_KEY_ID", "")
+        self.postbox_secret = os.getenv("POSTBOX_SECRET_ACCESS_KEY", "")
+        self.postbox_endpoint = os.getenv("POSTBOX_ENDPOINT", "https://postbox.cloud.yandex.net").rstrip("/")
+        self.postbox_region = os.getenv("POSTBOX_REGION", "ru-central1")
+        self.postbox_from_email = os.getenv("POSTBOX_FROM_EMAIL", "")
+        self.postbox_from_name = os.getenv("POSTBOX_FROM_NAME", "AI Maturity Platform")
+        self.provider = "postbox" if self.postbox_key_id and self.postbox_secret else "smtp"
 
     def _load_audit(self, audit_id):
         patterns = [
@@ -41,19 +49,28 @@ class EmailService:
         return None
 
     def get_status(self) -> dict:
-        """Статус SMTP-конфигурации (без секретов)."""
+        """Статус почтового провайдера (без секретов)."""
         return {
-            "configured": bool(os.getenv("SMTP_HOST")),
+            "provider": self.provider,
+            "configured": self.provider == "postbox" or bool(os.getenv("SMTP_HOST")),
             "host": self.smtp_host,
             "port": self.smtp_port,
             "use_tls": self.use_tls,
-            "from_email": self.from_email,
-            "from_name": self.from_name,
+            "from_email": self.postbox_from_email or self.from_email,
+            "from_name": self.postbox_from_name or self.from_name,
             "auth_enabled": bool(self.smtp_user and self.smtp_password),
+            "postbox": {
+                "endpoint": self.postbox_endpoint,
+                "region": self.postbox_region,
+                "configured": bool(self.postbox_key_id and self.postbox_secret),
+                "from_email": self.postbox_from_email,
+            },
         }
 
     def send_email(self, to_emails, subject, html_body: str = "", text_body: str = "") -> bool:
         """Отправка письма без вложений. Возвращает True при успехе."""
+        if self.provider == "postbox":
+            return self._send_via_postbox(to_emails, subject, html_body=html_body, text_body=text_body)
         to_list = [to_emails] if isinstance(to_emails, str) else list(to_emails)
         msg = MIMEMultipart()
         msg["From"] = "%s <%s>" % (self.from_name, self.from_email)
@@ -79,6 +96,97 @@ class EmailService:
         except Exception as e:
             print("EmailService: send_email failed: %s" % e)
             return False
+
+    def _sigv4_headers(self, method: str, path_qs: str, payload: bytes) -> dict:
+        """AWS Signature V4 (Yandex Cloud: region ru-central1, service ses)."""
+        import hashlib
+        import hmac
+        from datetime import datetime, timezone
+
+        access_key = self.postbox_key_id
+        secret_key = self.postbox_secret
+        region = self.postbox_region
+        service = "ses"
+
+        now = datetime.now(timezone.utc)
+        amz_date = now.strftime("%Y%m%dT%H%M%SZ")
+        date_stamp = now.strftime("%Y%m%d")
+
+        payload_hash = hashlib.sha256(payload).hexdigest()
+        host = self.postbox_endpoint.split("//", 1)[-1]
+
+        canonical_headers = f"host:{host}\nx-amz-content-sha256:{payload_hash}\nx-amz-date:{amz_date}\n"
+        signed_headers = "host;x-amz-content-sha256;x-amz-date"
+        canonical_request = "\n".join([
+            method, path_qs, "",
+            canonical_headers,
+            signed_headers,
+            payload_hash,
+        ])
+        scope = f"{date_stamp}/{region}/{service}/aws4_request"
+        string_to_sign = "\n".join([
+            "AWS4-HMAC-SHA256", amz_date, scope, hashlib.sha256(canonical_request.encode()).hexdigest(),
+        ])
+
+        def _hmac(key, msg):
+            return hmac.new(key, msg.encode(), hashlib.sha256).digest()
+
+        k_date = _hmac(("AWS4" + secret_key).encode(), date_stamp)
+        k_region = _hmac(k_date, region)
+        k_service = _hmac(k_region, service)
+        k_signing = _hmac(k_service, "aws4_request")
+        signature = hmac.new(k_signing, string_to_sign.encode(), hashlib.sha256).hexdigest()
+
+        return {
+            "Authorization": (
+                f"AWS4-HMAC-SHA256 Credential={access_key}/{scope}, "
+                f"SignedHeaders={signed_headers}, Signature={signature}"
+            ),
+            "x-amz-content-sha256": payload_hash,
+            "x-amz-date": amz_date,
+            "Content-Type": "application/json",
+        }
+
+    def _postbox_send(self, payload: dict) -> bool:
+        """POST в SES v2 совместимый API Postbox. payload — Simple или Raw."""
+        import requests
+
+        path = "/v2/outbound-emails"
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        headers = self._sigv4_headers("POST", path, body)
+        headers["Host"] = self.postbox_endpoint.split("//", 1)[-1]
+        try:
+            resp = requests.post(self.postbox_endpoint + path, data=body,
+                                 headers=headers, timeout=20)
+            ok = resp.status_code in (200, 201)
+            print("Postbox: send status %s %s" % (resp.status_code, resp.text[:200] if not ok else ""))
+            return ok
+        except Exception as e:
+            print("Postbox: send failed: %s" % e)
+            return False
+
+    def _send_via_postbox(self, to_emails, subject, html_body="", text_body=""):
+        from_addr = (
+            f"{self.postbox_from_name} <{self.postbox_from_email}>"
+            if self.postbox_from_name and self.postbox_from_email
+            else (self.postbox_from_email or self.from_email)
+        )
+        to_list = [to_emails] if isinstance(to_emails, str) else list(to_emails)
+        content: dict = {"Subject": {"Data": subject, "Charset": "UTF-8"}}
+        if html_body:
+            content["Html"] = {"Data": html_body, "Charset": "UTF-8"}
+        if text_body:
+            content["Text"] = {"Data": text_body, "Charset": "UTF-8"}
+        payload = {
+            "FromEmailAddress": from_addr,
+            "Destination": {"ToAddresses": to_list},
+            "Content": {"Simple": content},
+        }
+        return self._postbox_send(payload)
+
+    def _send_raw_via_postbox(self, mime_bytes: bytes) -> bool:
+        payload = {"RawMessage": {"Data": mime_bytes.decode("utf-8")}}
+        return self._postbox_send(payload)
 
     def send_report(self, to_email, audit_id, body=""):
         audit_data = self._load_audit(audit_id) or {"audit_id": audit_id}
@@ -144,6 +252,17 @@ class EmailService:
                 os.remove(tmp_path)
             except:
                 pass
+
+        if self.provider == "postbox":
+            sender = self.postbox_from_email or self.from_email
+            if self.postbox_from_name:
+                msg["From"] = "%s <%s>" % (self.postbox_from_name, sender)
+            else:
+                msg.replace_header("From", sender)
+            sent_ok = self._send_raw_via_postbox(msg.as_string().encode("utf-8"))
+            if sent_ok:
+                print("EmailService: sent via Postbox to %s" % to_email)
+            return sent_ok
 
         try:
             with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=15) as server:

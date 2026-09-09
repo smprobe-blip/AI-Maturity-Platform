@@ -102,6 +102,7 @@ export interface PlatformSettings {
     keycloak: { realm: string; client_id: string; configured: boolean };
     baserow: { url: string; leads_table_id: number; configured: boolean };
     email: {
+      provider: 'smtp' | 'postbox';
       configured: boolean;
       host: string;
       port: number;
@@ -109,6 +110,12 @@ export interface PlatformSettings {
       from_email: string;
       from_name: string;
       auth_enabled: boolean;
+      postbox?: {
+        endpoint: string;
+        region: string;
+        configured: boolean;
+        from_email: string;
+      };
     };
   };
   data: {
