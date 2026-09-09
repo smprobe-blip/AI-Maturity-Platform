@@ -187,10 +187,17 @@ class EmailService:
         }
         return self._postbox_send(payload)
 
-    def _send_raw_via_postbox(self, mime_bytes: bytes) -> bool:
+    def _send_raw_via_postbox(self, to_email: str, mime_bytes: bytes) -> bool:
         import base64 as _b64
 
+        from_addr = (
+            f"{self.postbox_from_name} <{self.postbox_from_email}>"
+            if self.postbox_from_name and self.postbox_from_email
+            else (self.postbox_from_email or self.from_email)
+        )
         payload = {
+            "FromEmailAddress": from_addr,
+            "Destination": {"ToAddresses": [to_email] if isinstance(to_email, str) else list(to_email)},
             "Content": {"Raw": {"Data": _b64.b64encode(mime_bytes).decode("ascii")}},
         }
         return self._postbox_send(payload)
@@ -266,7 +273,7 @@ class EmailService:
                 msg["From"] = "%s <%s>" % (self.postbox_from_name, sender)
             else:
                 msg.replace_header("From", sender)
-            sent_ok = self._send_raw_via_postbox(msg.as_string().encode("utf-8"))
+            sent_ok = self._send_raw_via_postbox(to_email, msg.as_string().encode("utf-8"))
             if sent_ok:
                 print("EmailService: sent via Postbox to %s" % to_email)
             return sent_ok
