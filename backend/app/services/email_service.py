@@ -190,7 +190,9 @@ class EmailService:
     def _send_raw_via_postbox(self, mime_bytes: bytes) -> bool:
         import base64 as _b64
 
-        payload = {"RawMessage": {"Data": _b64.b64encode(mime_bytes).decode("ascii")}}
+        payload = {
+            "Content": {"Raw": {"Data": _b64.b64encode(mime_bytes).decode("ascii")}},
+        }
         return self._postbox_send(payload)
 
     def send_report(self, to_email, audit_id, body=""):
