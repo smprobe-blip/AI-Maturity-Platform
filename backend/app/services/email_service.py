@@ -151,7 +151,7 @@ class EmailService:
         """POST в SES v2 совместимый API Postbox. payload — Simple или Raw."""
         import requests
 
-        path = "/v2/outbound-emails"
+        path = "/v2/email/outbound-emails"
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         headers = self._sigv4_headers("POST", path, body)
         headers["Host"] = self.postbox_endpoint.split("//", 1)[-1]
