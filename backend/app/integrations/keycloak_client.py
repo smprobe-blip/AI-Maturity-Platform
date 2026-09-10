@@ -132,15 +132,62 @@ class KeycloakClient:
         # Filter to valid platform roles
         return [r for r in roles if r in VALID_ROLES]
 
+    async def list_users(self, limit: int = 200) -> List[Dict[str, Any]]:
+        """Список пользователей realm (операторы платформы)."""
+        try:
+            admin_token = await self._get_admin_token()
+            async with httpx.AsyncClient(verify=False) as client:
+                response = await client.get(
+                    f"{self.admin_url}/users",
+                    params={"max": limit, "briefRepresentation": "false"},
+                    headers={"Authorization": f"Bearer {admin_token}"},
+                    timeout=10.0,
+                )
+                response.raise_for_status()
+                users = response.json()
+            return [
+                {
+                    "user_id": u.get("id"),
+                    "username": u.get("username"),
+                    "email": u.get("email"),
+                    "first_name": u.get("firstName") or "",
+                    "last_name": u.get("lastName") or "",
+                    "enabled": bool(u.get("enabled")),
+                    "service_account": u.get("serviceAccountClientId") is not None
+                    or str(u.get("username", "")).startswith("service-account-"),
+                }
+                for u in users
+            ]
+        except Exception as e:
+            logger.error("keycloak_list_users_error", error=str(e))
+            return []
+
+    async def delete_user(self, user_id: str) -> bool:
+        """Удалить пользователя realm."""
+        try:
+            admin_token = await self._get_admin_token()
+            async with httpx.AsyncClient(verify=False) as client:
+                response = await client.delete(
+                    f"{self.admin_url}/users/{user_id}",
+                    headers={"Authorization": f"Bearer {admin_token}"},
+                    timeout=10.0,
+                )
+                return response.status_code in (200, 204)
+        except Exception as e:
+            logger.error("keycloak_delete_user_error", error=str(e))
+            return False
+
     async def create_user(
         self,
         email: str,
         first_name: str,
         last_name: str,
         roles: List[str],
-    ) -> Optional[str]:
-        """Create user in Keycloak (admin API)."""
+        password: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Create user in Keycloak (admin API). Возвращает user_id + временный пароль."""
         try:
+            temp_password = password or __import__("secrets").token_urlsafe(9)
             admin_token = await self._get_admin_token()
 
             user_data = {
@@ -154,7 +201,7 @@ class KeycloakClient:
                     {
                         "type": "password",
                         "temporary": True,
-                        "value": "changeme123",
+                        "value": temp_password,
                     }
                 ],
             }
@@ -195,7 +242,7 @@ class KeycloakClient:
                     await self._assign_role(admin_token, user_id, role_name)
 
                 logger.info("keycloak_user_created", user_id=user_id, email=email)
-                return user_id
+                return {"user_id": user_id, "temp_password": temp_password}
 
         except Exception as e:
             logger.error("keycloak_create_user_error", error=str(e))

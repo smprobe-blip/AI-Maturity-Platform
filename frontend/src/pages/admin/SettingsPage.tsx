@@ -1,6 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
-import { KeyRound, Database, Mail, ShieldCheck } from 'lucide-react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { KeyRound, Database, Mail, ShieldCheck, Pencil } from 'lucide-react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Modal } from '@/components/ui/Modal';
 import { adminApi } from '@/services/adminApi';
 
 function Row({ label, value }: { label: string; value: string | number }) {
@@ -21,10 +26,34 @@ function Dot({ ok }: { ok: boolean }) {
 }
 
 export default function SettingsPage() {
+  const queryClient = useQueryClient();
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ public_base_url: '', postbox_from_email: '', postbox_from_name: '' });
+
   const { data: settings, isLoading } = useQuery({
     queryKey: ['settings'],
     queryFn: adminApi.getSettings,
   });
+
+  const updateMutation = useMutation({
+    mutationFn: adminApi.updateSettings,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+      queryClient.invalidateQueries({ queryKey: ['email-status'] });
+      toast.success('Настройки сохранены');
+      setEditOpen(false);
+    },
+    onError: () => toast.error('Ошибка сохранения'),
+  });
+
+  const openEdit = () => {
+    setEditForm({
+      public_base_url: '',
+      postbox_from_email: settings?.integrations.email.postbox?.from_email || settings?.integrations.email.from_email || '',
+      postbox_from_name: settings?.integrations.email.from_name || '',
+    });
+    setEditOpen(true);
+  };
 
   if (isLoading || !settings) {
     return (
@@ -42,10 +71,18 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-1">Настройки</h1>
-      <p className="text-gray-600 mb-6">
-        Состояние платформы (только чтение; секреты не отображаются)
-      </p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Настройки</h1>
+          <p className="text-gray-600">
+            Состояние платформы; секреты не отображаются
+          </p>
+        </div>
+        <Button variant="secondary" onClick={openEdit}>
+          <Pencil className="w-4 h-4 mr-2" />
+          Изменить
+        </Button>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -113,8 +150,82 @@ export default function SettingsPage() {
           <Row label="В архиве" value={d.audits_archived} />
           <Row label="Тестовых (test_manual)" value={d.audits_test_manual} />
           <Row label="PDF в библиотеке отчётов" value={d.reports_pdf} />
+          {settings.platform && 'public_base_url' in settings.platform && (
+            <Row label="Публичный URL" value={String(settings.platform.public_base_url)} />
+          )}
         </div>
       </div>
+
+      <EditModal
+        isOpen={editOpen}
+        onClose={() => setEditOpen(false)}
+        initial={{
+          public_base_url: 'https://audit.netbrainpower.ru',
+          postbox_from_email: settings.integrations.email.postbox?.from_email || settings.integrations.email.from_email,
+          postbox_from_name: settings.integrations.email.from_name,
+        }}
+        pending={updateMutation.isPending}
+        onSave={(v) => updateMutation.mutate(v)}
+      />
     </div>
+  );
+}
+
+function EditModal({
+  isOpen,
+  onClose,
+  initial,
+  pending,
+  onSave,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  initial: { public_base_url: string; postbox_from_email: string; postbox_from_name: string };
+  pending: boolean;
+  onSave: (v: { public_base_url?: string; postbox_from_email?: string; postbox_from_name?: string }) => void;
+}) {
+  const [f, setF] = useState(initial);
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Редактировать настройки">
+      <p className="text-sm text-gray-500 mb-4">
+        Пустое поле — оставить текущее значение. URL и адрес отправителя используются
+        в письмах респондентам.
+      </p>
+      <div className="space-y-4 mb-6">
+        <Input
+          label="Публичный URL (ссылка на результаты в письмах)"
+          placeholder={initial.public_base_url}
+          value={f.public_base_url}
+          onChange={(e) => setF({ ...f, public_base_url: e.target.value })}
+        />
+        <Input
+          label="Адрес отправителя (Postbox)"
+          placeholder={initial.postbox_from_email}
+          value={f.postbox_from_email}
+          onChange={(e) => setF({ ...f, postbox_from_email: e.target.value })}
+        />
+        <Input
+          label="Имя отправителя"
+          placeholder={initial.postbox_from_name}
+          value={f.postbox_from_name}
+          onChange={(e) => setF({ ...f, postbox_from_name: e.target.value })}
+        />
+      </div>
+      <div className="flex justify-end gap-3">
+        <Button variant="secondary" onClick={onClose}>Отмена</Button>
+        <Button
+          disabled={pending}
+          onClick={() =>
+            onSave({
+              public_base_url: f.public_base_url || undefined,
+              postbox_from_email: f.postbox_from_email || undefined,
+              postbox_from_name: f.postbox_from_name || undefined,
+            })
+          }
+        >
+          {pending ? 'Сохранение…' : 'Сохранить'}
+        </Button>
+      </div>
+    </Modal>
   );
 }

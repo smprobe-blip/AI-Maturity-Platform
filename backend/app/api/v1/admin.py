@@ -184,17 +184,46 @@ async def get_audit_pdf_report(
     )
 
 @router.get("/benchmarks")
-async def list_benchmarks():
-    """List all industry benchmarks."""
-    # TODO: Implement with BenchmarkService
-    return []
+async def list_benchmarks(current_user: User = Depends(get_current_user)):
+    """Сводка бенчмарков по отраслям (расчёт + ручные правки)."""
+    from app.services.benchmark_service import benchmark_service
+
+    return {"items": benchmark_service.admin_summary()}
 
 
 @router.post("/benchmarks/recalculate")
-async def recalculate_benchmarks():
-    """Recalculate all benchmarks."""
-    # TODO: Implement with BenchmarkService
-    return {"message": "Benchmarks recalculation started"}
+async def recalculate_benchmarks(current_user: User = Depends(get_current_user)):
+    """Пересчитать бенчмарки по накопленным аудитам."""
+    from app.services.benchmark_service import benchmark_service
+
+    benchmark_service.clear_cache()
+    return {"items": benchmark_service.admin_summary(), "recalculated": True}
+
+
+@router.put("/benchmarks/{industry}")
+async def update_benchmark(industry: str, payload: dict, current_user: User = Depends(get_current_user)):
+    """Ручная правка сводки бенчмарка по отрасли (persist в data_storage)."""
+    from app.services.settings_overrides import save_benchmark_override
+
+    allowed = {"mean_score", "median_score", "std_dev", "percentile_25", "percentile_75", "sample_size"}
+    values = {k: v for k, v in (payload or {}).items() if k in allowed}
+    saved = save_benchmark_override(industry, values)
+    from app.services.benchmark_service import benchmark_service
+    benchmark_service.clear_cache()
+    return {"industry": industry, "saved": saved.get(industry, {})}
+
+
+@router.put("/settings")
+async def update_settings(payload: dict, current_user: User = Depends(get_current_user)):
+    """Редактируемые настройки (белый список, persist в data_storage)."""
+    from app.services.settings_overrides import save_overrides
+
+    allowed = ["public_base_url", "postbox_from_email", "postbox_from_name"]
+    saved = save_overrides(payload or {}, allowed)
+    return {
+        "saved": {k: saved[k] for k in allowed if k in saved},
+        "message": "Настройки сохранены",
+    }
 
 @router.get("/leads")
 async def list_leads(
@@ -303,6 +332,61 @@ async def list_users(current_user: User = Depends(get_current_user)):
         out.append(u)
     out.sort(key=lambda x: x["last_seen"], reverse=True)
     return {"items": out, "total": len(out)}
+
+
+# === Операторы (Keycloak) ===
+@router.get("/users/keycloak")
+async def list_keycloak_users(current_user: User = Depends(get_current_user)):
+    """Операторы платформы: пользователи realm Keycloak."""
+    from app.integrations.keycloak_client import KeycloakClient
+
+    items = await KeycloakClient().list_users()
+    return {"items": items, "total": len(items)}
+
+
+@router.post("/users/invite")
+async def invite_operator(
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+):
+    """Создать оператора в Keycloak: пользователь + временный пароль (показывается один раз)."""
+    from app.integrations.keycloak_client import KeycloakClient
+
+    email = (payload or {}).get("email", "").strip().lower()
+    if not email or "@" not in email:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail="email is required")
+    role = (payload or {}).get("role", "analyst")
+    result = await KeycloakClient().create_user(
+        email=email,
+        first_name=(payload or {}).get("first_name", ""),
+        last_name=(payload or {}).get("last_name", ""),
+        roles=[role],
+    )
+    if not result:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail="Не удалось создать пользователя в Keycloak")
+    return {
+        "user_id": result["user_id"],
+        "email": email,
+        "role": role,
+        "temp_password": result["temp_password"],
+    }
+
+
+@router.delete("/users/keycloak/{user_id}")
+async def delete_keycloak_user(user_id: str, current_user: User = Depends(get_current_user)):
+    """Удалить оператора из Keycloak."""
+    from app.integrations.keycloak_client import KeycloakClient
+
+    if current_user and getattr(current_user, "sub", "") == user_id:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Нельзя удалить свою учётную запись")
+    ok = await KeycloakClient().delete_user(user_id)
+    if not ok:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"status": "deleted", "user_id": user_id}
 
 
 # === Настройки (не-секретный снимок) ===

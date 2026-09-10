@@ -255,6 +255,36 @@ export const adminApi = {
     return data;
   },
 
+  // KEYCLOAK OPERATORS
+  listKeycloakUsers: async () => {
+    const { data } = await adminClient.get('/users/keycloak');
+    return data.items as Array<{
+      user_id: string;
+      username: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      enabled: boolean;
+      service_account: boolean;
+    }>;
+  },
+  inviteOperator: async (payload: { email: string; first_name?: string; last_name?: string; role: string }) => {
+    const { data } = await adminClient.post('/users/invite', payload);
+    return data as { user_id: string; email: string; role: string; temp_password: string };
+  },
+  deleteOperator: async (userId: string) => {
+    const { data } = await adminClient.delete(`/users/keycloak/${userId}`);
+    return data;
+  },
+  updateBenchmark: async (industry: string, payload: Record<string, number | null>) => {
+    const { data } = await adminClient.put(`/benchmarks/${encodeURIComponent(industry)}`, payload);
+    return data;
+  },
+  updateSettings: async (payload: { public_base_url?: string; postbox_from_email?: string; postbox_from_name?: string }) => {
+    const { data } = await adminClient.put('/settings', payload);
+    return data;
+  },
+
   // LEADS
 listLeads: async (params?: { limit?: number; offset?: number }) => {
   const { data } = await adminClient.get('/leads', { params });

@@ -6,6 +6,8 @@ Falls back to static benchmarks.json if sample size < MIN_SAMPLE_SIZE.
 import json
 import statistics
 from pathlib import Path
+
+from app.services.settings_overrides import load_benchmark_overrides
 from typing import Dict, List, Optional, Tuple
 import duckdb
 
@@ -132,6 +134,62 @@ class BenchmarkService:
 
     def get_stats(self) -> Dict[str, int]:
         return self._counts.copy()
+
+
+    # ------------------------------------------------------------------
+    # Админская сводка: композитные статы по отраслям + ручные правки
+    # ------------------------------------------------------------------
+    def admin_summary(self) -> List[Dict]:
+        """Сводка по отраслям: n, mean, median, std, p25, p75 по композитному баллу.
+
+        Учёт: code -> INDUSTRY_KEY_MAP (Retail/Finance/...), без учёта архивных.
+        Ручные правки из data_storage/benchmark_overrides.json перекрывают расчёт.
+        """
+        buckets: Dict[str, List[float]] = {}
+
+        if self.raw_audits_path.exists():
+            for json_file in self.raw_audits_path.rglob("audit_*.json"):
+                try:
+                    with open(json_file, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                except Exception:
+                    continue
+                if data.get("status") == "archived":
+                    continue
+                code = (data.get("request", {}) or {}).get("company_industry", "").lower()
+                composite = (data.get("calculated_indices", {}) or {}).get("composite_score")
+                if composite is None:
+                    continue
+                bucket = INDUSTRY_KEY_MAP.get(code, "CrossIndustry")
+                buckets.setdefault(bucket, []).append(float(composite))
+
+        overrides = load_benchmark_overrides()
+        items = []
+        keys = ["CrossIndustry", "Retail", "Finance", "IT", "Manufacturing", "Services", "Healthcare"]
+        for key in keys:
+            scores = buckets.get(key, [])
+            manual = overrides.get(key)
+            if manual:
+                items.append({"industry": key, "manual": True, **manual})
+                continue
+            n = len(scores)
+            item = {
+                "industry": key,
+                "manual": False,
+                "sample_size": n,
+                "mean_score": round(statistics.mean(scores), 2) if n else None,
+                "median_score": round(statistics.median(scores), 2) if n else None,
+                "std_dev": round(statistics.stdev(scores), 2) if n > 1 else None,
+            }
+            if n >= 4:
+                q = statistics.quantiles(scores, n=4)
+                item["percentile_25"] = round(q[0], 2)
+                item["percentile_75"] = round(q[2], 2)
+            else:
+                item["percentile_25"] = None
+                item["percentile_75"] = None
+            items.append(item)
+        return items
 
 
 # Глобальный инстанс
