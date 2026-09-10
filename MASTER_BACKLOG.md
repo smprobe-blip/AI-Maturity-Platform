@@ -63,6 +63,7 @@
 
 ## 📋 Пул задач
 
+- [ ] **Handover: собрать все пароли и секреты в один файл** (для передачи проекта другому лицу). Состав инвентаря: VPS SSH (root@72.56.14.151, deployer, ключ GitHub Actions VPS_SSH_KEY), Keycloak (консоль kcadmin, админка admin, realm ai-maturity), Baserow (админ, BASEROW_API_TOKEN, БД), Postbox (API-ключ POSTBOX_*), DNS Timeweb, Yandex Cloud (аккаунт + сервисная учётка), файлы: prod-secrets-20260903.json, baserow-prod-secrets-20260905.json, baserow-admin-20260905.json, admin-credentials.json, prod .env (все POSTBOX_*/BASEROW_*/KEYCLOAK_*), deploy.sh + /opt/deploy.sh, fail2ban. Хранить: менеджер паролей, НЕ в git
 - [ ] Актуализировать полное описание проекта для диссертации (описание платформы в тексте ВКР отстало от состояния 09.2026: научный контур аналитики + выгрузки + библиотека отчётов, CRM-лиды Baserow, удаление тестовых аудитов, лендинг v3, дисс-отчёт как генерируемая глава; сверить с Главой 2 и diploma v12)
 - [ ] 6.7-fix: тултипы правее кнопок, ширина ×1.5
 - [ ] FE-1: фикс дубля атрибута title в Page2.tsx:231
