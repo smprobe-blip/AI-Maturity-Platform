@@ -316,7 +316,11 @@ export default function UsersPage() {
           <Input label="От кого (email)" placeholder="reports@netbrainpower.ru" value={smtpForm.from} onChange={(e) => setSmtpForm({ ...smtpForm, from: e.target.value })} />
           <Input label="Имя отправителя" value={smtpForm.from_display_name} onChange={(e) => setSmtpForm({ ...smtpForm, from_display_name: e.target.value })} />
           <Input label="Логин (если с авторизацией)" value={smtpForm.user} onChange={(e) => setSmtpForm({ ...smtpForm, user: e.target.value })} />
-          <Input label="Пароль приложения (если с авторизацией)" type="password" value={smtpForm.password} onChange={(e) => setSmtpForm({ ...smtpForm, password: e.target.value })} />
+          <Input label="Пароль (секрет API-ключа Postbox)" type="password" value={smtpForm.password} onChange={(e) => setSmtpForm({ ...smtpForm, password: e.target.value })} />
+          <p className="text-xs text-gray-500">
+            Postbox: сервер postbox.cloud.yandex.net:587 (STARTTLS), логин API_KEY,
+            пароль — секрет API-ключа с правом yc.postbox.send.
+          </p>
         </div>
         <div className="flex justify-end gap-3">
           <Button variant="secondary" onClick={() => setSmtpOpen(false)}>Отмена</Button>
