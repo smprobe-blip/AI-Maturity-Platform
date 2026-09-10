@@ -1,5 +1,6 @@
 """Keycloak OIDC client for authentication and RBAC."""
 
+import os
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -284,6 +285,13 @@ class KeycloakClient:
                     users = search.json()
                     if users:
                         user_id = users[0]["id"]
+                        if required_actions:
+                            await client.put(
+                                f"{self.admin_url}/users/{user_id}",
+                                json={"requiredActions": required_actions},
+                                headers={"Authorization": f"Bearer {admin_token}"},
+                                timeout=10.0,
+                            )
 
                 # Assign roles
                 for role_name in roles:
@@ -293,16 +301,23 @@ class KeycloakClient:
                 email_sent = False
                 if required_actions and user_id:
                     try:
-                        act_resp = await client.get(
+                        act_resp = await client.put(
                             f"{self.admin_url}/users/{user_id}/execute-actions-email",
-                            params={"lifespan": 86400},
+                            params={
+                                "client_id": self.client_id,
+                                "redirect_uri": os.environ.get("PUBLIC_BASE_URL", "") + "/login"
+                                if os.environ.get("PUBLIC_BASE_URL") else None,
+                                "lifespan": 86400,
+                            },
+                            json=["VERIFY_EMAIL", "UPDATE_PASSWORD"],
                             headers={"Authorization": f"Bearer {admin_token}"},
-                            timeout=10.0,
+                            timeout=15.0,
                         )
                         email_sent = act_resp.status_code in (200, 204)
                         if not email_sent:
                             logger.warning("keycloak_actions_email_failed",
-                                           status=act_resp.status_code)
+                                           status=act_resp.status_code,
+                                           body=act_resp.text[:200])
                     except Exception as mail_err:
                         logger.error("keycloak_actions_email_error", error=str(mail_err))
                     if not email_sent:

@@ -58,6 +58,18 @@ services:
     networks:
       - app-network
 
+  mailrelay:
+    build: ./infrastructure/mailrelay
+    container_name: ai-maturity-mailrelay
+    restart: unless-stopped
+    environment:
+      POSTBOX_ACCESS_KEY_ID: ${POSTBOX_ACCESS_KEY_ID}
+      POSTBOX_SECRET_ACCESS_KEY: ${POSTBOX_SECRET_ACCESS_KEY}
+      POSTBOX_FROM_EMAIL: ${POSTBOX_FROM_EMAIL:-reports@netbrainpower.ru}
+      SMTP_LISTEN_PORT: "1025"
+    networks:
+      - app-network
+
   keycloak:
     image: quay.io/keycloak/keycloak:24.0
     container_name: ai-maturity-keycloak
@@ -70,6 +82,7 @@ services:
       KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: "IWi?FJE?qFJetigT69CL"
+      KC_LOG_LEVEL: DEBUG
       KEYCLOAK_ADMIN: kcadmin
       KEYCLOAK_ADMIN_PASSWORD: "_-n92uG_%0Pmfuo0_fAAnw"
       KC_HTTP_RELATIVE_PATH: /auth

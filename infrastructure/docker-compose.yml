@@ -128,6 +128,18 @@ services:
     restart: unless-stopped
 
   # === KEYCLOAK (Auth) ===
+  mailrelay:
+    build: ../infrastructure/mailrelay
+    container_name: ai-maturity-mailrelay
+    restart: unless-stopped
+    environment:
+      POSTBOX_ACCESS_KEY_ID: ${POSTBOX_ACCESS_KEY_ID:-}
+      POSTBOX_SECRET_ACCESS_KEY: ${POSTBOX_SECRET_ACCESS_KEY:-}
+      POSTBOX_FROM_EMAIL: ${POSTBOX_FROM_EMAIL:-reports@netbrainpower.ru}
+      SMTP_LISTEN_PORT: "1025"
+    networks:
+      - app-network
+
   keycloak:
     image: quay.io/keycloak/keycloak:24.0
     container_name: ai-maturity-keycloak
