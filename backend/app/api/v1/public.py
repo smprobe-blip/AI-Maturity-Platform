@@ -6,6 +6,7 @@ import json
 import os
 from fastapi.responses import JSONResponse, Response
 from app.core.config import settings
+from app.services.settings_overrides import get_public_base_url as _public_base_url
 from app.models.schemas import (
     ServiceRequestBody,
     AuditResponse,
@@ -118,7 +119,7 @@ async def email_audit_report(audit_id: str, req: EmailReportRequest) -> dict:
         f"Уровень зрелости: {audit.calculated_indices.maturity_level}\n\n"
         f"Рекомендации:\n" +
         "\n".join(f"• {r}" for r in audit.recommendations) +
-        f"\n\nОткрыть полную версию: {settings.public_base_url}/results/{audit_id}\n"
+        f"\n\nОткрыть полную версию: {_public_base_url(settings.public_base_url)}/results/{audit_id}\n"
     )
     
     # Email service is optional (may not be configured)
