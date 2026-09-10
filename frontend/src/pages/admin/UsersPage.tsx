@@ -46,7 +46,10 @@ export default function UsersPage() {
       setInviteOpen(false);
       setForm({ email: '', first_name: '', last_name: '', role: 'analyst' });
     },
-    onError: () => toast.error('Ошибка создания оператора'),
+    onError: (err: any) => {
+      const detail = err?.response?.data?.detail;
+      toast.error(typeof detail === 'string' ? detail : 'Ошибка создания оператора');
+    },
   });
 
   const deleteMutation = useMutation({
