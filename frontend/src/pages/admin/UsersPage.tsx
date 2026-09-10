@@ -222,7 +222,7 @@ export default function UsersPage() {
           <Button
             variant="danger"
             disabled={!form.email.includes('@') || inviteMutation.isPending}
-            onClick={() => inviteMutation.mutate()}
+            onClick={() => inviteMutation.mutate(form)}
           >
             Создать
           </Button>
