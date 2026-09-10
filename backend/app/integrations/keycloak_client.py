@@ -177,6 +177,51 @@ class KeycloakClient:
             logger.error("keycloak_delete_user_error", error=str(e))
             return False
 
+    async def get_realm_smtp(self) -> Dict[str, Any]:
+        """SMTP-конфигурация realm (пароль маскируется)."""
+        try:
+            admin_token = await self._get_admin_token()
+            async with httpx.AsyncClient(verify=False) as client:
+                response = await client.get(
+                    f"{self.admin_url}",
+                    headers={"Authorization": f"Bearer {admin_token}"},
+                    timeout=10.0,
+                )
+                response.raise_for_status()
+                rep = response.json()
+            smtp = rep.get("smtpServer") or {}
+            masked = dict(smtp)
+            if masked.get("password"):
+                masked["password"] = "********"
+            return {"configured": bool(smtp), "smtp": masked}
+        except Exception as e:
+            logger.error("keycloak_get_realm_smtp_error", error=str(e))
+            return {"configured": False, "smtp": {}}
+
+    async def set_realm_smtp(self, smtp: Dict[str, Any]) -> bool:
+        """Установить SMTP-конфигурацию realm (полный rep: get → modify → put)."""
+        try:
+            admin_token = await self._get_admin_token()
+            async with httpx.AsyncClient(verify=False) as client:
+                rep_resp = await client.get(
+                    f"{self.admin_url}",
+                    headers={"Authorization": f"Bearer {admin_token}"},
+                    timeout=10.0,
+                )
+                rep_resp.raise_for_status()
+                rep = rep_resp.json()
+                rep["smtpServer"] = smtp
+                upd = await client.put(
+                    f"{self.admin_url}",
+                    json=rep,
+                    headers={"Authorization": f"Bearer {admin_token}"},
+                    timeout=15.0,
+                )
+                return upd.status_code in (200, 204)
+        except Exception as e:
+            logger.error("keycloak_set_realm_smtp_error", error=str(e))
+            return False
+
     async def create_user(
         self,
         email: str,
@@ -184,8 +229,13 @@ class KeycloakClient:
         last_name: str,
         roles: List[str],
         password: Optional[str] = None,
+        required_actions: Optional[List[str]] = None,
     ) -> Optional[Dict[str, Any]]:
-        """Create user in Keycloak (admin API). Возвращает user_id + временный пароль."""
+        """Create user in Keycloak.
+
+        required_actions (например ['VERIFY_EMAIL','UPDATE_PASSWORD']) — создать
+        без пароля и отправить письмо с действиями (нужен SMTP в realm).
+        """
         try:
             temp_password = password or __import__("secrets").token_urlsafe(9)
             admin_token = await self._get_admin_token()
@@ -197,13 +247,11 @@ class KeycloakClient:
                 "lastName": last_name,
                 "enabled": True,
                 "emailVerified": False,
-                "credentials": [
-                    {
-                        "type": "password",
-                        "temporary": True,
-                        "value": temp_password,
-                    }
-                ],
+                **(
+                    {"requiredActions": required_actions}
+                    if required_actions
+                    else {"credentials": [{"type": "password", "temporary": True, "value": temp_password}]}
+                ),
             }
 
             async with httpx.AsyncClient(verify=False) as client:
@@ -241,8 +289,32 @@ class KeycloakClient:
                 for role_name in roles:
                     await self._assign_role(admin_token, user_id, role_name)
 
+                # Письмо с действиями (если запрошено)
+                email_sent = False
+                if required_actions and user_id:
+                    try:
+                        act_resp = await client.get(
+                            f"{self.admin_url}/users/{user_id}/execute-actions-email",
+                            params={"lifespan": 86400},
+                            headers={"Authorization": f"Bearer {admin_token}"},
+                            timeout=10.0,
+                        )
+                        email_sent = act_resp.status_code in (200, 204)
+                        if not email_sent:
+                            logger.warning("keycloak_actions_email_failed",
+                                           status=act_resp.status_code)
+                    except Exception as mail_err:
+                        logger.error("keycloak_actions_email_error", error=str(mail_err))
+                    if not email_sent:
+                        # fallback: временный пароль вместо письма
+                        await client.put(
+                            f"{self.admin_url}/users/{user_id}/reset-password",
+                            json={"type": "password", "temporary": True, "value": temp_password},
+                            headers={"Authorization": f"Bearer {admin_token}"},
+                            timeout=10.0,
+                        )
                 logger.info("keycloak_user_created", user_id=user_id, email=email)
-                return {"user_id": user_id, "temp_password": temp_password}
+                return {"user_id": user_id, "temp_password": temp_password, "email_sent": email_sent}
 
         except Exception as e:
             logger.error("keycloak_create_user_error", error=str(e))

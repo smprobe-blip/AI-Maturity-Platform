@@ -213,6 +213,41 @@ async def update_benchmark(industry: str, payload: dict, current_user: User = De
     return {"industry": industry, "saved": saved.get(industry, {})}
 
 
+@router.put("/settings/weights")
+async def update_weights(payload: dict, current_user: User = Depends(get_current_user)):
+    """Базовые веса осей методики ('1'..'7'). Нормализуются, клампятся алгоритмом А.1-А.2."""
+    from app.services.settings_overrides import save_overrides, load_overrides
+    from app.services.industry_weights_service import _clamp_normalize
+
+    weights = (payload or {}).get("weights")
+    if not isinstance(weights, dict) or set(weights.keys()) != {str(i) for i in range(1, 8)}:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail="weights: ровно ключи '1'..'7'")
+    try:
+        weights = {k: float(v) for k, v in weights.items()}
+        if any(v < 0 for v in weights.values()) or sum(weights.values()) <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail="weights: положительные числа")
+    normalized = _clamp_normalize(weights)
+    saved = save_overrides({"dimension_weights": normalized}, ["dimension_weights"])
+    return {"saved": saved.get("dimension_weights")}
+
+
+@router.delete("/settings/weights")
+async def reset_weights(current_user: User = Depends(get_current_user)):
+    """Сбросить веса осей к базовым (гл. 2.10)."""
+    from app.services.settings_overrides import load_overrides, save_overrides
+    from app.services.industry_weights_service import BASE_WEIGHTS
+
+    current = load_overrides()
+    current.pop("dimension_weights", None)
+    allowed = ["public_base_url", "postbox_from_email", "postbox_from_name", "dimension_weights"]
+    save_overrides(current, allowed)
+    return {"saved": BASE_WEIGHTS, "reset": True}
+
+
 @router.put("/settings")
 async def update_settings(payload: dict, current_user: User = Depends(get_current_user)):
     """Редактируемые настройки (белый список, persist в data_storage)."""
@@ -357,11 +392,14 @@ async def invite_operator(
         from fastapi import HTTPException
         raise HTTPException(status_code=422, detail="email is required")
     role = (payload or {}).get("role", "analyst")
+    send_email = bool((payload or {}).get("send_email"))
+    required_actions = ["VERIFY_EMAIL", "UPDATE_PASSWORD"] if send_email else None
     result = await KeycloakClient().create_user(
         email=email,
         first_name=(payload or {}).get("first_name", ""),
         last_name=(payload or {}).get("last_name", ""),
         roles=[role],
+        required_actions=required_actions,
     )
     if not result:
         from fastapi import HTTPException
@@ -370,7 +408,8 @@ async def invite_operator(
         "user_id": result["user_id"],
         "email": email,
         "role": role,
-        "temp_password": result["temp_password"],
+        "email_sent": result.get("email_sent", False),
+        "temp_password": result.get("temp_password"),
     }
 
 
@@ -387,6 +426,45 @@ async def delete_keycloak_user(user_id: str, current_user: User = Depends(get_cu
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="User not found")
     return {"status": "deleted", "user_id": user_id}
+
+
+# === Почта Keycloak (для execute-actions-email) ===
+@router.get("/users/keycloak-smtp")
+async def get_keycloak_smtp(current_user: User = Depends(get_current_user)):
+    from app.integrations.keycloak_client import KeycloakClient
+
+    return await KeycloakClient().get_realm_smtp()
+
+
+@router.put("/users/keycloak-smtp")
+async def set_keycloak_smtp(payload: dict, current_user: User = Depends(get_current_user)):
+    from app.integrations.keycloak_client import KeycloakClient
+
+    data = payload or {}
+    required = ["host", "from"]
+    missing = [k for k in required if not data.get(k)]
+    if missing:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail=f"Требуются поля: {', '.join(missing)}")
+    smtp = {
+        "host": data["host"],
+        "port": str(data.get("port", "465")),
+        "from": data["from"],
+        "fromDisplayName": data.get("from_display_name", "AI Maturity Platform"),
+        "ssl": "true" if data.get("ssl", True) else "false",
+        "starttls": "false",
+        "auth": "true" if data.get("auth") else "false",
+        "user": data.get("user", ""),
+        "password": data.get("password", ""),
+    }
+    if not smtp["auth"]:
+        smtp.pop("user", None)
+        smtp.pop("password", None)
+    ok = await KeycloakClient().set_realm_smtp(smtp)
+    if not ok:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail="Не удалось сохранить SMTP в Keycloak")
+    return {"status": "saved"}
 
 
 # === Настройки (не-секретный снимок) ===
@@ -406,7 +484,11 @@ async def get_settings(current_user: User = Depends(get_current_user)):
     reports_dir = FsPath(app_settings.reports_path) / "dissertation"
     reports_count = len(list(reports_dir.glob("*.pdf"))) if reports_dir.exists() else 0
 
+    from app.services.industry_weights_service import get_industry_weights
+
+    eff_weights, w_source = get_industry_weights()
     return {
+        "weights": {"values": eff_weights, "source": w_source},
         "platform": {"name": "AI Maturity Assessment Platform"},
         "integrations": {
             "keycloak": {

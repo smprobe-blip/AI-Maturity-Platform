@@ -25,7 +25,8 @@ export default function UsersPage() {
   const [search, setSearch] = useState('');
   const [inviteOpen, setInviteOpen] = useState(false);
   const [form, setForm] = useState({ email: '', first_name: '', last_name: '', role: 'analyst' });
-  const [invited, setInvited] = useState<{ email: string; temp_password: string } | null>(null);
+  const [sendEmail, setSendEmail] = useState(false);
+  const [invited, setInvited] = useState<{ email: string; temp_password?: string; email_sent?: boolean } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ user_id: string; email: string } | null>(null);
 
   const { data: operators } = useQuery({
@@ -38,11 +39,30 @@ export default function UsersPage() {
     queryFn: adminApi.listUsers,
   });
 
+  const { data: kcSmtp } = useQuery({
+    queryKey: ['kc-smtp'],
+    queryFn: adminApi.getKeycloakSmtp,
+  });
+
+  const smtpMutation = useMutation({
+    mutationFn: (payload: Record<string, string | boolean>) => adminApi.setKeycloakSmtp(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['kc-smtp'] });
+      toast.success('SMTP Keycloak сохранён — письма с подтверждением будут уходить');
+      setSmtpOpen(false);
+    },
+    onError: () => toast.error('Ошибка сохранения SMTP'),
+  });
+
+  const [smtpOpen, setSmtpOpen] = useState(false);
+  const [smtpForm, setSmtpForm] = useState({ host: '', port: '465', from: '', from_display_name: 'AI Maturity Platform', user: '', password: '', ssl: true });
+
   const inviteMutation = useMutation({
-    mutationFn: adminApi.inviteOperator,
+    mutationFn: (vars: { form: typeof form; send_email: boolean }) =>
+      adminApi.inviteOperator({ ...vars.form, send_email: vars.send_email }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['keycloak-users'] });
-      setInvited({ email: res.email, temp_password: res.temp_password });
+      setInvited({ email: res.email, temp_password: res.temp_password, email_sent: res.email_sent });
       setInviteOpen(false);
       setForm({ email: '', first_name: '', last_name: '', role: 'analyst' });
     },
@@ -214,6 +234,14 @@ export default function UsersPage() {
             onChange={(e) => setForm({ ...form, role: e.target.value })}
             options={ROLES}
           />
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={sendEmail}
+              onChange={(e) => setSendEmail(e.target.checked)}
+            />
+            Отправить письмо с подтверждением (нужна почта Keycloak)
+          </label>
         </div>
         <div className="flex justify-end gap-3">
           <Button variant="secondary" onClick={() => setInviteOpen(false)}>
@@ -222,7 +250,7 @@ export default function UsersPage() {
           <Button
             variant="danger"
             disabled={!form.email.includes('@') || inviteMutation.isPending}
-            onClick={() => inviteMutation.mutate(form)}
+            onClick={() => inviteMutation.mutate({ form, send_email: sendEmail })}
           >
             Создать
           </Button>
@@ -231,15 +259,73 @@ export default function UsersPage() {
 
       {/* Temp password modal */}
       <Modal isOpen={!!invited} onClose={() => setInvited(null)} title="Оператор создан">
-        <p className="text-gray-600 mb-4">
-          Временный пароль для <strong>{invited?.email}</strong> — покажите его один раз,
-          оператор сменит его при первом входе:
-        </p>
-        <div className="bg-gray-100 rounded p-3 font-mono text-center text-lg mb-6 select-all">
-          {invited?.temp_password}
-        </div>
+        {invited?.email_sent ? (
+          <p className="text-gray-600 mb-6">
+            Письмо с подтверждением отправлено на <strong>{invited?.email}</strong>.
+            Оператор подтвердит email и задаст пароль по ссылке.
+          </p>
+        ) : (
+          <>
+            <p className="text-gray-600 mb-4">
+              Временный пароль для <strong>{invited?.email}</strong> — покажите его один раз,
+              оператор сменит его при первом входе:
+            </p>
+            <div className="bg-gray-100 rounded p-3 font-mono text-center text-lg mb-6 select-all">
+              {invited?.temp_password}
+            </div>
+          </>
+        )}
         <div className="flex justify-end">
           <Button onClick={() => setInvited(null)}>Готово</Button>
+        </div>
+      </Modal>
+
+      {/* SMTP Keycloak */}
+      <div className="flex items-center justify-between mb-4 mt-10">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Почта Keycloak</h2>
+          <p className="text-sm text-gray-600">
+            Нужна для писем с подтверждением при приглашении операторов
+          </p>
+        </div>
+        <Button variant="secondary" onClick={() => setSmtpOpen(true)}>
+          Настроить
+        </Button>
+      </div>
+      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-8">
+        {kcSmtp?.configured ? (
+          <div className="text-sm text-gray-700">
+            <div className="flex items-center gap-2">
+              <Badge variant="success">настроена</Badge>
+              <span className="font-mono">
+                {String(kcSmtp.smtp.host ?? '')}:{String(kcSmtp.smtp.port ?? '')}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">
+            Не настроена — при приглашении используйте временный пароль.
+          </p>
+        )}
+      </div>
+
+      <Modal isOpen={smtpOpen} onClose={() => setSmtpOpen(false)} title="SMTP для писем Keycloak">
+        <div className="space-y-4 mb-6">
+          <Input label="SMTP-сервер" placeholder="smtp.yandex.ru" value={smtpForm.host} onChange={(e) => setSmtpForm({ ...smtpForm, host: e.target.value })} />
+          <Input label="Порт" placeholder="465" value={smtpForm.port} onChange={(e) => setSmtpForm({ ...smtpForm, port: e.target.value })} />
+          <Input label="От кого (email)" placeholder="reports@netbrainpower.ru" value={smtpForm.from} onChange={(e) => setSmtpForm({ ...smtpForm, from: e.target.value })} />
+          <Input label="Имя отправителя" value={smtpForm.from_display_name} onChange={(e) => setSmtpForm({ ...smtpForm, from_display_name: e.target.value })} />
+          <Input label="Логин (если с авторизацией)" value={smtpForm.user} onChange={(e) => setSmtpForm({ ...smtpForm, user: e.target.value })} />
+          <Input label="Пароль приложения (если с авторизацией)" type="password" value={smtpForm.password} onChange={(e) => setSmtpForm({ ...smtpForm, password: e.target.value })} />
+        </div>
+        <div className="flex justify-end gap-3">
+          <Button variant="secondary" onClick={() => setSmtpOpen(false)}>Отмена</Button>
+          <Button
+            disabled={!smtpForm.host || !smtpForm.from || smtpMutation.isPending}
+            onClick={() => smtpMutation.mutate(smtpForm)}
+          >
+            Сохранить
+          </Button>
         </div>
       </Modal>
 

@@ -268,9 +268,23 @@ export const adminApi = {
       service_account: boolean;
     }>;
   },
-  inviteOperator: async (payload: { email: string; first_name?: string; last_name?: string; role: string }) => {
+  inviteOperator: async (payload: {
+    email: string;
+    first_name?: string;
+    last_name?: string;
+    role: string;
+    send_email?: boolean;
+  }) => {
     const { data } = await adminClient.post('/users/invite', payload);
-    return data as { user_id: string; email: string; role: string; temp_password: string };
+    return data as { user_id: string; email: string; role: string; email_sent: boolean; temp_password?: string };
+  },
+  getKeycloakSmtp: async () => {
+    const { data } = await adminClient.get('/users/keycloak-smtp');
+    return data as { configured: boolean; smtp: Record<string, unknown> };
+  },
+  setKeycloakSmtp: async (payload: Record<string, unknown>) => {
+    const { data } = await adminClient.put('/users/keycloak-smtp', payload);
+    return data;
   },
   deleteOperator: async (userId: string) => {
     const { data } = await adminClient.delete(`/users/keycloak/${userId}`);
@@ -282,6 +296,14 @@ export const adminApi = {
   },
   updateSettings: async (payload: { public_base_url?: string; postbox_from_email?: string; postbox_from_name?: string }) => {
     const { data } = await adminClient.put('/settings', payload);
+    return data;
+  },
+  updateWeights: async (weights: Record<string, string>) => {
+    const { data } = await adminClient.put('/settings/weights', { weights });
+    return data;
+  },
+  resetWeights: async () => {
+    const { data } = await adminClient.delete('/settings/weights');
     return data;
   },
 

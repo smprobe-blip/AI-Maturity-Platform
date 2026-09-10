@@ -53,3 +53,13 @@ def save_benchmark_override(industry: str, values: Dict[str, Any]) -> Dict[str, 
     with open(_benchmarks_path(), "w", encoding="utf-8") as f:
         json.dump(current, f, ensure_ascii=False, indent=2)
     return current
+
+def get_dimension_weights_override():
+    """Override базовых весов осей ('1'..'7') или None."""
+    w = load_overrides().get("dimension_weights")
+    if not isinstance(w, dict) or set(w.keys()) != {str(i) for i in range(1, 8)}:
+        return None
+    try:
+        return {k: float(v) for k, v in w.items()}
+    except (TypeError, ValueError):
+        return None

@@ -140,6 +140,8 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        <WeightsCard />
+
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-primary-600" />
@@ -227,5 +229,102 @@ function EditModal({
         </Button>
       </div>
     </Modal>
+  );
+}
+
+const DIM_LABELS: Record<string, string> = {
+  '1': 'Стратегия и управление',
+  '2': 'Люди и культура',
+  '3': 'Инфраструктура',
+  '4': 'Данные',
+  '5': 'Модели',
+  '6': 'Внедрение ИИ',
+  '7': 'Исследования (R&D)',
+};
+
+function WeightsCard() {
+  const queryClient = useQueryClient();
+  const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: adminApi.getSettings });
+  const [edit, setEdit] = useState(false);
+  const [values, setValues] = useState<Record<string, string>>({});
+
+  const weights = (settings as any)?.weights?.values as Record<string, number> | undefined;
+  const source = (settings as any)?.weights?.source as string | undefined;
+
+  const saveMutation = useMutation({
+    mutationFn: () => adminApi.updateWeights(values),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+      toast.success('Веса осей сохранены (нормированы алгоритмом А.1–А.2)');
+      setEdit(false);
+    },
+    onError: () => toast.error('Ошибка сохранения весов'),
+  });
+
+  const resetMutation = useMutation({
+    mutationFn: adminApi.resetWeights,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+      toast.success('Веса сброшены к базовым (гл. 2.10)');
+      setEdit(false);
+    },
+    onError: () => toast.error('Ошибка сброса'),
+  });
+
+  if (!weights) return null;
+  const sum = Object.values(weights).reduce((a, b) => a + Number(b), 0);
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-6 lg:col-span-2">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          Веса осей методики
+          <Badge variant={source === 'manual_override' ? 'warning' : 'neutral'}>
+            {source === 'manual_override' ? 'ручные' : 'базовые'}
+          </Badge>
+        </h2>
+        <div className="flex gap-2">
+          {edit ? (
+            <>
+              <Button variant="secondary" onClick={() => setEdit(false)}>Отмена</Button>
+              <Button disabled={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
+                Сохранить
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="secondary" onClick={() => { setValues(Object.fromEntries(Object.entries(weights).map(([k, v]) => [k, String(v)]))); setEdit(true); }}>
+                Изменить
+              </Button>
+              <Button variant="secondary" disabled={resetMutation.isPending} onClick={() => resetMutation.mutate()}>
+                Сбросить
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+        {Object.entries(weights).map(([dim, v]) => (
+          <div key={dim} className="flex items-center justify-between py-1.5 border-b border-gray-100">
+            <span className="text-sm text-gray-600">
+              {dim}. {DIM_LABELS[dim] || dim}
+            </span>
+            {edit ? (
+              <input
+                className="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-right font-mono"
+                value={values[dim] ?? String(v)}
+                onChange={(e) => setValues({ ...values, [dim]: e.target.value })}
+              />
+            ) : (
+              <span className="text-sm font-medium font-mono">{Number(v).toFixed(2)}</span>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-gray-500 mt-3">
+        Сумма: {sum.toFixed(2)} (при сохранении нормируется до 1,00, клампинг [0,05; 0,25]).
+        Веса применяются к новым аудитам; у существующих сохраняется weights_used на дату расчёта.
+      </p>
+    </div>
   );
 }

@@ -7,6 +7,7 @@ w_emp_d(g) = max(beta_d; eps) / sum_j max(beta_j; eps),   eps = 0.05
 При n_g < k эмпирическая поправка не применяется (возврат к базовому/экспертному профилю).
 """
 from typing import Dict, Optional, Tuple
+from app.services.settings_overrides import get_dimension_weights_override
 
 K = 30
 W_MIN, W_MAX = 0.05, 0.25
@@ -56,7 +57,8 @@ def compute_industry_weights(
 ) -> Dict[str, float]:
     """Веса осей для отрасли g по формулам А.1-А.2."""
     ind = (industry or '').lower().strip()
-    base = dict(EXPERT_PROFILES.get(ind, BASE_WEIGHTS))
+    override = get_dimension_weights_override()
+    base = dict(override) if override else dict(EXPERT_PROFILES.get(ind, BASE_WEIGHTS))
     if not beta or (n_g or 0) < K:
         return _clamp_normalize(base)
     floored = {d: max(EPS, float(beta.get(d, 0.0))) for d in base}
@@ -75,6 +77,11 @@ def get_industry_weights(
     """Точка входа: возвращает (веса, источник). Источники: base / expert_profile / empirical."""
     ind = (industry or '').lower().strip()
     if not beta or (n_g or 0) < K:
-        source = 'expert_profile' if ind in EXPERT_PROFILES else 'base'
+        source = (
+            'manual_override' if get_dimension_weights_override()
+            else ('expert_profile' if ind in EXPERT_PROFILES else 'base')
+        )
         return compute_industry_weights(ind, 0, None), source
+    if get_dimension_weights_override():
+        return compute_industry_weights(ind, n_g, beta), 'manual_override'
     return compute_industry_weights(ind, n_g, beta), 'empirical'
