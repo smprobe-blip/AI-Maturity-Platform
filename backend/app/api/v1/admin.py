@@ -448,11 +448,11 @@ async def set_keycloak_smtp(payload: dict, current_user: User = Depends(get_curr
         raise HTTPException(status_code=422, detail=f"Требуются поля: {', '.join(missing)}")
     smtp = {
         "host": data["host"],
-        "port": str(data.get("port", "465")),
+        "port": str(data.get("port", "587")),
         "from": data["from"],
         "fromDisplayName": data.get("from_display_name", "AI Maturity Platform"),
-        "ssl": "true" if data.get("ssl", True) else "false",
-        "starttls": "false",
+        "enableSSL": "true" if data.get("ssl") else "false",
+        "enableStartTls": "true" if data.get("starttls", True) else "false",
         "auth": "true" if data.get("auth") else "false",
         "user": data.get("user", ""),
         "password": data.get("password", ""),
