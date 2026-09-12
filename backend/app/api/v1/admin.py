@@ -167,10 +167,17 @@ async def get_audit_pdf_report(
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail=f"Audit not found: {str(e)}")
     
+    # AuditService возвращает pydantic-модель — сервис PDF ждёт dict
+    audit_data = (
+        audit.model_dump() if hasattr(audit, "model_dump")
+        else audit.dict() if hasattr(audit, "dict")
+        else audit
+    )
+
     # Генерируем PDF
-    pdf_bytes = pdf_service.generate_audit_report(audit)
-    
-    company_name = audit.get("company_profile", {}).get("company_name", "report")
+    pdf_bytes = pdf_service.generate_audit_report(audit_data)
+
+    company_name = (audit_data.get("company_profile") or {}).get("company_name", "report")
     safe_name = "".join(c for c in company_name if c.isalnum() or c in " -_")[:50]
     filename = f"ai_maturity_report_{safe_name}_{audit_id[:8]}.pdf"
     
